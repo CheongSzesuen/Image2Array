@@ -89,29 +89,6 @@ jobs:
           echo "$sanitized_messages" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
 
-      - name: Compose release notes
-        id: release_notes
-        run: |
-          # 准备变量
-          current_time=$(date -d "${{ github.run_started_at }}" "+%Y-%m-%d %H:%M %Z")
-          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          changelog_content="${{ steps.changelog.outputs.messages }}"
-
-          # 生成最终发布说明
-          delimiter=$(openssl rand -hex 12)
-          {
-            echo "body<<${delimiter}"
-            cat << 'EOR'
-# 🚀 Image2Array v${{ env.VERSION }}
-
-
-
-## 🛠️ 构建信息
-
-- [查看构建详情]($RUN_URL)
-EOR
-          } | envsubst >> $GITHUB_OUTPUT
-          echo "${delimiter}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: actions/create-release@v1
