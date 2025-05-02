@@ -1,173 +1,45 @@
-name: Image2Array Multi-Platform Release
+name: Build Windows EXE
 
 on:
   push:
     tags:
-      - 'v*'  # 正式版本
-      - 'v*-beta'  # 测试版本
-
-permissions:
-  contents: write
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
-  build-windows:
-    name: Build Windows (${{ matrix.arch }})
+  build:
+    name: Build Windows EXE
     runs-on: windows-latest
-    strategy:
-      matrix:
-        include:
-          - arch: x86
-            pyarch: x86
-            suffix: "windows-x86"
-            file_ext: ".exe"
-          - arch: x64
-            pyarch: x64
-            suffix: "windows-x64"
-            file_ext: ".exe"
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Clean workspace
-        run: Remove-Item -Recurse -Force build, dist, __pycache__ -ErrorAction SilentlyContinue
 
-      - uses: actions/setup-python@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          architecture: ${{ matrix.pyarch }}
-        
-      - name: Build and Rename
+          python-version: '3.x'
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pyinstaller --onefile --name Image2Array --add-data "originimage;originimage" --add-data "image_data.h;." "Image2Array.py"
-          
-          $version = $env:GITHUB_REF_NAME.Substring(1)
-          $newName = "Image2Array-${{ matrix.suffix }}-v$version${{ matrix.file_ext }}"
-          if (Test-Path -Path "dist\Image2Array.exe") {
-              Rename-Item -Path "dist\Image2Array.exe" -NewName $newName
-          } else {
-              echo "Error: dist\Image2Array.exe does not exist."
-              exit 1
-          }
-        shell: pwsh
+          pip install pyinstaller PyQt5 pillow
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-${{ matrix.arch }}
-          path: dist/Image2Array-${{ matrix.suffix }}-*
-
-  build-linux:
-    name: Build Linux (${{ matrix.arch }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [x64, arm64]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up QEMU (ARM64)
-        if: matrix.arch == 'arm64'
-        uses: docker/setup-qemu-action@v3
-      
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Build executable
+      - name: Get version
+        id: get_version
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          
-          if [ "${{ matrix.arch }}" == "arm64" ]; then
-              export CC=aarch64-linux-gnu-gcc
-          fi
-          
-          pyinstaller --onefile --name Image2Array \
-            --add-data 'originimage:originimage' \
-            --add-data 'image_data.h:.' \
-            Image2Array.py
-          
-          version=${GITHUB_REF#refs/tags/v}
-          mv dist/Image2Array "dist/Image2Array-linux-${{ matrix.arch }}-v$version"
+          echo "VERSION=$(echo ${{ github.ref }} | sed -e 's/.*v//')" >> $GITHUB_ENV
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-${{ matrix.arch }}
-          path: dist/Image2Array-linux-${{ matrix.arch }}-*
-
-  build-macos:
-    name: Build macOS (${{ matrix.arch }})
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        arch: [x64, arm64]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Build executable
+      - name: Build Windows x64 EXE
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          
-          pyinstaller --onefile --name Image2Array \
-            --add-data 'originimage:originimage' \
-            --add-data 'image_data.h:.' \
-            Image2Array.py
-          
-          version=${GITHUB_REF#refs/tags/v}
-          mv dist/Image2Array "dist/Image2Array-macos-${{ matrix.arch }}-v$version"
+          pyinstaller --onefile --windowed --name Image2Array-Windows-x64-${{ env.VERSION }} --distpath ./dist/x64 your_script_name.py
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ matrix.arch }}
-          path: dist/Image2Array-macos-${{ matrix.arch }}-*
-
-  create-release:
-    name: Create Release
-    needs: [build-windows, build-linux, build-macos]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/download-artifact@v4
-        with:
-          path: release-files
-          merge-multiple: true
-
-      - name: Verify binaries
+      - name: Build Windows x86 EXE
         run: |
-          echo "=== File Verification ==="
-          ls -R release-files
-          
-          required_patterns=(
-            "Image2Array-windows-x86-v*.exe"
-            "Image2Array-windows-x64-v*.exe"
-            "Image2Array-linux-x64-v*"
-            "Image2Array-linux-arm64-v*"
-            "Image2Array-macos-x64-v*"
-            "Image2Array-macos-arm64-v*"
-          )
-          
-          for pattern in "${required_patterns[@]}"; do
-            if ! compgen -G "release-files/$pattern" > /dev/null; then
-              echo "❌ Missing file: $pattern"
-              exit 1
-            fi
-            echo "✅ Found: $(ls release-files/$pattern)"
-          done
+          pyinstaller --onefile --windowed --name Image2Array-Windows-x86-${{ env.VERSION }} --distpath ./dist/x86 --win-private-assemblies your_script_name.py
 
-      - name: Detect release type
-        id: release-type
-        run: |
-          if [[ "${{ github.ref_name }}" == *"-beta"* ]]; then
-            echo "type=beta" >> $GITHUB_OUTPUT
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref_name }}" == *"-rc"* ]]; then
-            echo "type=release-candidate" >> $GITHUB_OUTPUT
-            echo "prerelease
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Image2Array-EXE
+          path: dist/
