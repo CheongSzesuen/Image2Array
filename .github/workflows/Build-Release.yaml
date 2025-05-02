@@ -8,13 +8,102 @@ on:
 
 jobs:
   build-windows:
-    # Windows构建配置保持不变...
+    name: Build Windows (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, x86]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          architecture: ${{ matrix.arch }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pillow==11.2.1 PyQt5==5.15.11 PyQt5-Qt5==5.15.16
+
+      - name: Build executable
+        shell: cmd
+        run: |
+          pyinstaller --onefile --noconsole ^
+            --name Image2Array ^
+            --add-data "originimage;originimage" ^
+            Image2Array.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: dist/Image2Array.exe
 
   build-linux:
-    # Linux构建配置保持不变...
+    name: Build Linux (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up QEMU (ARM64)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y python3-dev
+          pip install pyinstaller pillow==11.2.1 PyQt5==5.15.11 PyQt5-Qt5==5.15.16
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --noconsole \
+            --name Image2Array \
+            --add-data "originimage:originimage" \
+            Image2Array.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: dist/Image2Array
 
   build-macos:
-    # macOS构建配置保持不变...
+    name: Build macOS (${{ matrix.arch }})
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller pillow==11.2.1 PyQt5==5.15.11 PyQt5-Qt5==5.15.16
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --noconsole \
+            --name Image2Array \
+            --add-data "originimage:originimage" \
+            Image2Array.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: dist/Image2Array
 
   create-release:
     name: Create Release
@@ -23,30 +112,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 关键修复点：获取完整git历史
-          path: src       # 指定检出路径
+          fetch-depth: 0
+          path: src
 
       - name: Setup git environment
         run: |
-          # 切换到检出目录
           cd src
           git config --global --add safe.directory $GITHUB_WORKSPACE/src
 
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: '*'
           merge-multiple: true
 
       - name: Generate changelog
         id: changelog
         run: |
-          cd src  # 关键修复点：进入git仓库目录
+          cd src
           git fetch --tags --force
           
           current_tag="${{ github.ref_name }}"
           previous_tag=$(git describe --tags --abbrev=0 "$current_tag^" 2>/dev/null || echo "")
           
-          # 生成带格式的更新日志
           if [ -z "$previous_tag" ]; then
             messages=$(git log --reverse --pretty=format:"- %s ↳ %an (%h)")
           else
@@ -77,4 +165,6 @@ jobs:
             artifacts/windows-x64/Image2Array.exe
             artifacts/windows-x86/Image2Array.exe
             artifacts/linux-x64/Image2Array
+            artifacts/linux-arm64/Image2Array
+            artifacts/macos-x64/Image2Array
             artifacts/macos-arm64/Image2Array
