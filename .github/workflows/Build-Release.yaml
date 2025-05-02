@@ -31,7 +31,8 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          echo "VERSION=$(echo ${{ github.ref }} | sed -e 's/.*v//')" >> $GITHUB_ENV
+          version=$(echo "${{ github.ref }}" | sed 's/.*v//')
+          echo "VERSION=$version" >> $GITHUB_ENV
 
       - name: Build x64 EXE
         shell: cmd
@@ -74,22 +75,34 @@ jobs:
           current_tag="${{ github.ref_name }}"
           previous_tag=$(git describe --tags --abbrev=0 "$current_tag^" 2>/dev/null || echo "")
 
-          # 生成原始提交日志
           if [ -z "$previous_tag" ]; then
             messages=$(git log --reverse --pretty=format:"- %s%n  ↳ %an (%h)%n%n%b")
           else
             messages=$(git log --reverse --pretty=format:"- %s%n  ↳ %an (%h)%n%n%b" "$previous_tag".."$current_tag")
           fi
 
-          # 转义特殊字符
           sanitized_messages=$(echo "$messages" | sed -e 's/\\/\\\\/g' -e 's/\$/\\\$/g' -e 's/`/\\`/g')
 
-          # 安全输出处理
           delimiter=$(openssl rand -hex 12)
           echo "messages<<${delimiter}" >> $GITHUB_OUTPUT
           echo "$sanitized_messages" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
 
+      - name: Compose release notes
+        id: release_notes
+        run: |
+          current_time=$(date -d "${{ github.run_started_at }}" "+%Y-%m-%d %H:%M %Z")
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          delimiter=$(openssl rand -hex 12)
+          echo "body<<${delimiter}" >> $GITHUB_OUTPUT
+          echo "# 🚀 Image2Array v${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          echo "## 📜 更新内容" >> $GITHUB_OUTPUT
+          echo "${{ steps.changelog.outputs.messages }}" >> $GITHUB_OUTPUT
+          echo "## 🛠️ 构建信息" >> $GITHUB_OUTPUT
+          echo "- **构建时间**: ${current_time}" >> $GITHUB_OUTPUT
+          echo "- [查看构建详情](${run_url})" >> $GITHUB_OUTPUT
+          echo "${delimiter}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: actions/create-release@v1
@@ -98,7 +111,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Image2Array v${{ env.VERSION }}
-          body: ${{ fromJson(steps.release_notes.outputs.body) }}
+          body: ${{ steps.release_notes.outputs.body }}
           draft: false
           prerelease: false
 
