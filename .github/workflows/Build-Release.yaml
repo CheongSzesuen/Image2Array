@@ -20,7 +20,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -31,15 +31,24 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          echo "VERSION=$(echo ${{ github.ref }} | sed -e 's/.*v//')" >> $GITHUB_ENV
+          version=$(echo ${{ github.ref_name }} | sed 's/^v//')
+          echo "VERSION=$version" >> $GITHUB_ENV
 
       - name: Build Windows x64 EXE
         run: |
-          pyinstaller --onefile --windowed --name Image2Array-Windows-x64-${{ env.VERSION }} --distpath ./dist/x64 Image2Array.py --hidden-import=PyQt5.sip
+          pyinstaller --onefile --windowed ^
+            --name Image2Array-Windows-x64-${{ env.VERSION }} ^
+            --distpath ./dist/x64 ^
+            Image2Array.py ^
+            --hidden-import=PyQt5.sip
 
       - name: Build Windows x86 EXE
         run: |
-          pyinstaller --onefile --windowed --name Image2Array-Windows-x86-${{ env.VERSION }} --distpath ./dist/x86 Image2Array.py --hidden-import=PyQt5.sip
+          pyinstaller --onefile --windowed ^
+            --name Image2Array-Windows-x86-${{ env.VERSION }} ^
+            --distpath ./dist/x86 ^
+            Image2Array.py ^
+            --hidden-import=PyQt5.sip
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -57,61 +66,54 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get previous release tag
-        id: get_previous_tag
+      - name: Generate changelog
+        id: changelog
         run: |
-          PREVIOUS_TAG=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases" | \
-            jq --arg current_tag "${{ github.ref_name }}" \
-            '[.[] | select(.tag_name | startswith("v"))] | map(select(.tag_name < $current_tag)) | sort_by(.tag_name) | last | .tag_name' \
-            | tr -d '"')
-          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
+          git fetch --tags --force
+          current_tag="${{ github.ref_name }}"
+          previous_tag=$(git describe --tags --abbrev=0 "$current_tag^" 2>/dev/null || echo "")
 
-      - name: Generate release notes
-        id: generate_release_notes
-        run: |
-          # 获取提交日志
-          if [[ -z "${{ env.PREVIOUS_TAG }}" ]]; then
-            COMMIT_LOG=$(git log --format="- %s [%an]%n  %b" --no-merges --since="1 month ago")
+          if [ -z "$previous_tag" ]; then
+            echo "No previous tag found. Generating full changelog"
+            messages=$(git log --reverse --pretty=format:"- %s%n  ↳ %an (%h)%n%n%b")
           else
-            COMMIT_LOG=$(git log --format="- %s [%an]%n  %b" --no-merges ${{ env.PREVIOUS_TAG }}..HEAD)
+            echo "Generating changelog from $previous_tag to $current_tag"
+            messages=$(git log --reverse --pretty=format:"- %s%n  ↳ %an (%h)%n%n%b" "$previous_tag".."$current_tag")
           fi
 
-          # 准备变量
-          VERSION="${{ env.VERSION }}"
-          RUN_TIME=$(date -d "${{ github.run_started_at }}" "+%Y年%m月%d日 %H:%M UTC")
-          RUN_LINK="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          delimiter=$(openssl rand -hex 16)
+          echo "messages<<${delimiter}" >> $GITHUB_OUTPUT
+          echo "$messages" >> $GITHUB_OUTPUT
+          echo "${delimiter}" >> $GITHUB_OUTPUT
 
-          # 生成多行Release Notes（关键修复部分）
-          RELEASE_BODY=$(cat << RELEASE_EOF
-## 🚀 新版本 v${VERSION}
+      - name: Compose release notes
+        id: release_notes
+        run: |
+          current_time=$(date -d "${{ github.run_started_at }}" "+%Y-%m-%d %H:%M %Z")
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-### 📝 更新内容
+          delimiter=$(openssl rand -hex 16)
+          echo "body<<${delimiter}" >> $GITHUB_OUTPUT
+          cat << EOF >> $GITHUB_OUTPUT
+# 🚀 Image2Array v${{ env.VERSION }}
 
-${COMMIT_LOG}
+## 📜 更新内容
+${{ steps.changelog.outputs.messages }}
 
-### 🛠️ 构建信息
-- **构建时间**: ${RUN_TIME}
-- **构建详情**: [点击查看](${RUN_LINK})
-RELEASE_EOF
-          )
-
-          # 写入环境变量（GitHub官方推荐方式）
-          delimiter="EOF_$(openssl rand -hex 8)"
-          echo "RELEASE_BODY<<${delimiter}" >> $GITHUB_ENV
-          echo "${RELEASE_BODY}" >> $GITHUB_ENV
-          echo "${delimiter}" >> $GITHUB_ENV
+## 🛠️ 构建信息
+- **构建时间**: $current_time
+- **构建日志**: [${{ github.run_number }}]($run_url)
+${delimiter}
+EOF
 
       - name: Create Release
-        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Image2Array v${{ env.VERSION }}
-          body: ${{ env.RELEASE_BODY }}
+          body: ${{ steps.release_notes.outputs.body }}
           draft: false
           prerelease: false
 
@@ -119,9 +121,9 @@ RELEASE_EOF
         uses: actions/download-artifact@v4
         with:
           name: Image2Array-EXE
-          path: ./dist/
+          path: ./dist
 
-      - name: Upload EXE to Release
+      - name: Upload x64 EXE
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -131,7 +133,7 @@ RELEASE_EOF
           asset_name: Image2Array-Windows-x64-${{ env.VERSION }}.exe
           asset_content_type: application/octet-stream
 
-      - name: Upload x86 EXE to Release
+      - name: Upload x86 EXE
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
