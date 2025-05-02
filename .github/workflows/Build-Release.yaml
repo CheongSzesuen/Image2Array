@@ -37,7 +37,7 @@ jobs:
 
       - name: Build Windows x86 EXE
         run: |
-          pyinstaller --onefile --windowed --name Image2Array-Windows-x86-${{ env.VERSION }} --distpath ./dist/x86 --win-private-assemblies Image2Array.py --hidden-import=PyQt5.sip
+          pyinstaller --onefile --windowed --name Image2Array-Windows-x86-${{ env.VERSION }} --distpath ./dist/x86 Image2Array.py --hidden-import=PyQt5.sip
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
