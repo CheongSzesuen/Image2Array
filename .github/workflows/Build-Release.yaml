@@ -76,7 +76,7 @@ jobs:
           else
             COMMIT_LOG=$(git log --format="* %s (%an) - %b" --no-merges ${{ env.PREVIOUS_TAG }}..HEAD)
           fi
-          RELEASE_NOTES=$(cat << EOF
+          RELEASE_NOTES=$(cat << "EOF"
 # Image2Array v${{ env.VERSION }}
 
 ## 更新内容
@@ -85,10 +85,12 @@ ${COMMIT_LOG}
 
 ## 构建信息
 - **构建时间**: ${{ github.run_started_at }}  
-- **构建页面**: [查看构建页面](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})  
+- **构建页面**: [查看构建页面](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 EOF
           )
-          echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Create Release
         id: create_release
