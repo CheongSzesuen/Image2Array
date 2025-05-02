@@ -38,12 +38,17 @@ jobs:
       - name: Build and Rename
         run: |
           python -m pip install --upgrade pip
-          pip install pillow pyinstaller
-          pyinstaller --onefile --name Image2Array --add-data "originimage;originimage" --add-data "image;image" "script.py"
+          pip install -r requirements.txt
+          pyinstaller --onefile --name Image2Array --add-data "originimage;originimage" --add-data "image_data.h;." "Image2Array.py"
           
           $version = $env:GITHUB_REF_NAME.Substring(1)
           $newName = "Image2Array-${{ matrix.suffix }}-v$version${{ matrix.file_ext }}"
-          Rename-Item -Path "dist\Image2Array.exe" -NewName $newName
+          if (Test-Path -Path "dist\Image2Array.exe") {
+              Rename-Item -Path "dist\Image2Array.exe" -NewName $newName
+          } else {
+              echo "Error: dist\Image2Array.exe does not exist."
+              exit 1
+          }
         shell: pwsh
 
       - uses: actions/upload-artifact@v4
@@ -71,7 +76,7 @@ jobs:
       - name: Build executable
         run: |
           python -m pip install --upgrade pip
-          pip install pillow pyinstaller
+          pip install -r requirements.txt
           
           if [ "${{ matrix.arch }}" == "arm64" ]; then
               export CC=aarch64-linux-gnu-gcc
@@ -79,8 +84,8 @@ jobs:
           
           pyinstaller --onefile --name Image2Array \
             --add-data 'originimage:originimage' \
-            --add-data 'image:image' \
-            script.py
+            --add-data 'image_data.h:.' \
+            Image2Array.py
           
           version=${GITHUB_REF#refs/tags/v}
           mv dist/Image2Array "dist/Image2Array-linux-${{ matrix.arch }}-v$version"
@@ -106,12 +111,12 @@ jobs:
       - name: Build executable
         run: |
           python -m pip install --upgrade pip
-          pip install pillow pyinstaller
+          pip install -r requirements.txt
           
           pyinstaller --onefile --name Image2Array \
             --add-data 'originimage:originimage' \
-            --add-data 'image:image' \
-            script.py
+            --add-data 'image_data.h:.' \
+            Image2Array.py
           
           version=${GITHUB_REF#refs/tags/v}
           mv dist/Image2Array "dist/Image2Array-macos-${{ matrix.arch }}-v$version"
@@ -228,8 +233,4 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
 
             ### 🛠️ Build Information
-            - 🕒 Build Time: ${{ steps.build-info.outputs.time }} (UTC+8)
-            - 🏷️ Version: ${{ github.ref_name }}
-            - 📌 Commit: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          files: |
-            release-files/*
+            - 🕒 Build Time: ${{ steps.build-info.outputs
