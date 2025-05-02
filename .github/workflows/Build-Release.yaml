@@ -104,8 +104,7 @@ jobs:
             cat << 'EOR'
 # 🚀 Image2Array v${{ env.VERSION }}
 
-## 📜 更新内容
-$CHANGELOG_CONTENT
+
 
 ## 🛠️ 构建信息
 - **构建时间**: $CURRENT_TIME
