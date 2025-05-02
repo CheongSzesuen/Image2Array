@@ -13,25 +13,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Check directory structure
+      - name: Check project structure
         run: |
-          if [ ! -d "Image2Array" ]; then
-            echo "❌ 项目结构错误：缺少 Image2Array 目录"
-            exit 1
-          fi
+          echo "当前目录结构:"
+          ls -R
           
           required_files=(
-            "Image2Array/requirements.txt"
-            "Image2Array/Image2Array.py"
-            "Image2Array/originimage/example.jpg"
+            "requirements.txt"
+            "Image2Array.py"
+            "originimage/example.jpg"
           )
           
+          missing=0
           for file in "${required_files[@]}"; do
             if [ ! -f "$file" ]; then
               echo "❌ 缺失必要文件: $file"
-              exit 1
+              missing=1
+            else
+              echo "✅ 文件存在: $file"
             fi
           done
+          
+          if [ $missing -ne 0 ]; then
+            exit 1
+          fi
           echo "✅ 项目结构验证通过"
 
   build-windows:
@@ -41,8 +46,6 @@ jobs:
     strategy:
       matrix:
         arch: [x64, x86]
-    env:
-      WORKING_DIR: "${{ github.workspace }}/Image2Array"
     steps:
       - uses: actions/checkout@v4
 
@@ -53,18 +56,15 @@ jobs:
           architecture: ${{ matrix.arch }}
 
       - name: Install dependencies
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Generate image_data.h
-        working-directory: ${{ env.WORKING_DIR }}
         run: python Image2Array.py originimage/example.jpg
 
       - name: Build executable
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           pyinstaller --onefile --noconsole ^
             --name Image2Array-Windows-${{ matrix.arch }} ^
@@ -72,70 +72,20 @@ jobs:
             Image2Array.py
 
       - name: Package artifacts
-        working-directory: ${{ env.WORKING_DIR }}/dist
         run: |
           $version = $env:GITHUB_REF_NAME.Substring(1)
-          Rename-Item -Path "Image2Array-Windows-${{ matrix.arch }}.exe" `
+          Rename-Item -Path "dist/Image2Array-Windows-${{ matrix.arch }}.exe" `
             -NewName "Image2Array-Windows-${{ matrix.arch }}-v$version.exe"
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows-binaries
-          path: ${{ env.WORKING_DIR }}/dist/*.exe
+          path: dist/*.exe
 
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
     needs: validate-structure
-    env:
-      WORKING_DIR: "${{ github.workspace }}/Image2Array"
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install system dependencies
-        run: sudo apt-get install -y python3-dev
-
-      - name: Install Python dependencies
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-      - name: Generate image_data.h
-        working-directory: ${{ env.WORKING_DIR }}
-        run: python Image2Array.py originimage/example.jpg
-
-      - name: Build executable
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          pyinstaller --onefile --noconsole \
-            --name Image2Array-Linux \
-            --add-data "image_data.h:." \
-            Image2Array.py
-
-      - name: Package artifacts
-        working-directory: ${{ env.WORKING_DIR }}/dist
-        run: |
-          version=${GITHUB_REF#refs/tags/v}
-          mv Image2Array-Linux "Image2Array-Linux-v$version"
-          chmod +x "Image2Array-Linux-v$version"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-binary
-          path: ${{ env.WORKING_DIR }}/dist/Image2Array-Linux-*
-
-  build-macos:
-    name: Build macOS
-    runs-on: macos-latest
-    needs: validate-structure
-    env:
-      WORKING_DIR: "${{ github.workspace }}/Image2Array"
     steps:
       - uses: actions/checkout@v4
 
@@ -144,18 +94,54 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          sudo apt-get install -y python3-dev
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Generate image_data.h
+        run: python Image2Array.py originimage/example.jpg
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --noconsole \
+            --name Image2Array-Linux \
+            --add-data "image_data.h:." \
+            Image2Array.py
+
+      - name: Package artifacts
+        run: |
+          version=${GITHUB_REF#refs/tags/v}
+          mv dist/Image2Array-Linux "dist/Image2Array-Linux-v$version"
+          chmod +x "dist/Image2Array-Linux-v$version"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-binary
+          path: dist/Image2Array-Linux-*
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    needs: validate-structure
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Generate image_data.h
-        working-directory: ${{ env.WORKING_DIR }}
         run: python Image2Array.py originimage/example.jpg
 
       - name: Build executable
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           pyinstaller --onefile --noconsole \
             --name Image2Array-macOS \
@@ -163,16 +149,15 @@ jobs:
             Image2Array.py
 
       - name: Package artifacts
-        working-directory: ${{ env.WORKING_DIR }}/dist
         run: |
           version=${GITHUB_REF#refs/tags/v}
-          mv Image2Array-macOS "Image2Array-macOS-v$version"
-          chmod +x "Image2Array-macOS-v$version"
+          mv dist/Image2Array-macOS "dist/Image2Array-macOS-v$version"
+          chmod +x "dist/Image2Array-macOS-v$version"
 
       - uses: actions/upload-artifact@v4
         with:
           name: macos-binary
-          path: ${{ env.WORKING_DIR }}/dist/Image2Array-macOS-*
+          path: dist/Image2Array-macOS-*
 
   create-release:
     name: Create Release
@@ -186,7 +171,7 @@ jobs:
 
       - name: Verify files
         run: |
-          echo "=== 文件结构验证 ==="
+          echo "=== 生成文件列表 ==="
           find release-artifacts -type f -exec ls -lh {} \;
           
           echo "=== 文件类型验证 ==="
@@ -205,14 +190,14 @@ jobs:
             - 🍎 macOS 可执行文件
 
             ### 使用说明
-            1. 下载对应平台的压缩包
-            2. 解压后运行可执行文件
-            3. 自动生成 image_data.h
+            1. 下载对应平台的可执行文件
+            2. 将要转换的图片放入 originimage 目录
+            3. 运行程序自动生成 image_data.h
 
             ### 构建信息
             - 版本号: ${{ github.ref_name }}
-            - 提交ID: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             - 构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            - 提交记录: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
           files: |
             release-artifacts/windows-binaries/*
             release-artifacts/linux-binary/*
