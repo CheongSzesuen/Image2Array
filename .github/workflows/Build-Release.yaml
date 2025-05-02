@@ -107,7 +107,7 @@ jobs:
 
 
 ## 🛠️ 构建信息
-- **构建时间**: $CURRENT_TIME
+
 - [查看构建详情]($RUN_URL)
 EOR
           } | envsubst >> $GITHUB_OUTPUT
