@@ -18,10 +18,10 @@ jobs:
           echo "当前目录结构:"
           ls -R
           
+          # 仅验证必要文件存在
           required_files=(
             "requirements.txt"
             "Image2Array.py"
-            "originimage/example.jpg"
           )
           
           missing=0
@@ -61,14 +61,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Generate image_data.h
-        run: python Image2Array.py originimage/example.jpg
-
       - name: Build executable
         run: |
           pyinstaller --onefile --noconsole ^
             --name Image2Array-Windows-${{ matrix.arch }} ^
-            --add-data "image_data.h;." ^
+            --add-data "image_data.h;." ^  # 只包含生成的.h文件
             Image2Array.py
 
       - name: Package artifacts
@@ -95,19 +92,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get install -y python3-dev
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
-
-      - name: Generate image_data.h
-        run: python Image2Array.py originimage/example.jpg
 
       - name: Build executable
         run: |
           pyinstaller --onefile --noconsole \
             --name Image2Array-Linux \
-            --add-data "image_data.h:." \
+            --add-data "image_data.h:." \  # 只包含生成的.h文件
             Image2Array.py
 
       - name: Package artifacts
@@ -138,14 +131,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Generate image_data.h
-        run: python Image2Array.py originimage/example.jpg
-
       - name: Build executable
         run: |
           pyinstaller --onefile --noconsole \
             --name Image2Array-macOS \
-            --add-data "image_data.h:." \
+            --add-data "image_data.h:." \  # 只包含生成的.h文件
             Image2Array.py
 
       - name: Package artifacts
@@ -191,13 +181,15 @@ jobs:
 
             ### 使用说明
             1. 下载对应平台的可执行文件
-            2. 将要转换的图片放入 originimage 目录
+            2. 创建 originimage 目录并放入需要转换的图片
             3. 运行程序自动生成 image_data.h
+          
+            ### 注意
+            📌 需要自行准备图片文件，程序运行时自动从 originimage 目录读取
 
             ### 构建信息
             - 版本号: ${{ github.ref_name }}
             - 构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            - 提交记录: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
           files: |
             release-artifacts/windows-binaries/*
             release-artifacts/linux-binary/*
