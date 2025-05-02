@@ -1,164 +1,237 @@
-name: Build and Release
+name: Image2Array Multi-Platform Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'  # 正式版本
+      - 'v*-beta'  # 测试版本
+
+permissions:
+  contents: write
 
 jobs:
-  build:
-    name: Build (${{ matrix.os }} ${{ matrix.arch }})
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    name: Build Windows (${{ matrix.arch }})
+    runs-on: windows-latest
     strategy:
       matrix:
         include:
-          # Windows builds
-          - os: windows-latest
-            arch: x86
-            suffix: .exe
+          - arch: x86
             pyarch: x86
-          - os: windows-latest
-            arch: x64
-            suffix: .exe
+            suffix: "windows-x86"
+            file_ext: ".exe"
+          - arch: x64
             pyarch: x64
-            
-          # Linux builds
-          - os: ubuntu-latest
-            arch: x64
-            suffix: ''
-            pyarch: x86_64 # 使用通用的 x86_64 架构标识
-          - os: ubuntu-latest
-            arch: arm64
-            suffix: ''
-            pyarch: aarch64 # 使用通用的 aarch64 架构标识
-            
-          # macOS builds
-          - os: macos-latest
-            arch: x64
-            suffix: ''
-            pyarch: x86_64
-          - os: macos-latest
-            arch: arm64
-            suffix: ''
-            pyarch: arm64
+            suffix: "windows-x64"
+            file_ext: ".exe"
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      
+      - name: Clean workspace
+        run: Remove-Item -Recurse -Force build, dist, __pycache__ -ErrorAction SilentlyContinue
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        architecture: ${{ matrix.pyarch }}
-        cache: 'pip' # 启用 pip 缓存以提高效率
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          architecture: ${{ matrix.pyarch }}
+        
+      - run: |
+          python -m pip install --upgrade pip
+          pip install pillow pyinstaller
+          pyinstaller --onefile --name Image2Array \
+            --add-data 'originimage:originimage' \
+            --add-data 'image:image' \
+            script.py
+          
+          $version = $env:GITHUB_REF_NAME.Substring(1)  # 去掉 'v' 前缀
+          $newName = "Image2Array-${{ matrix.suffix }}-v$version${{ matrix.file_ext }}"
+          Rename-Item -Path "dist\Image2Array.exe" -NewName $newName
+        shell: pwsh
 
-    - name: Verify Python
-      run: |
-        python --version
-        which python
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: dist/Image2Array-${{ matrix.suffix }}-*
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pillow pyinstaller
+  build-linux:
+    name: Build Linux (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up QEMU (ARM64)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+      
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Build executable
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow pyinstaller
+          
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+              export CC=aarch64-linux-gnu-gcc
+          fi
+          
+          pyinstaller --onefile --name Image2Array \
+            --add-data 'originimage:originimage' \
+            --add-data 'image:image' \
+            script.py
+          
+          version=${GITHUB_REF#refs/tags/v}
+          mv dist/Image2Array "dist/Image2Array-linux-${{ matrix.arch }}-v$version"
 
-    - name: Build executable
-      run: |
-        pyinstaller --onefile --name Image2Array \
-          --add-data 'originimage:originimage' \
-          --add-data 'image:image' \
-          script.py
-      env:
-        PYTHONOPTIMIZE: 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: dist/Image2Array-linux-${{ matrix.arch }}-*
 
-    - name: Rename artifact
-      run: |
-        $version = "${{ github.ref_name }}".Replace("v", "")
-        $platform = "${{ runner.os }}" -replace "macOS", "macos"
-        $platform = $platform -replace "Ubuntu", "linux"
-        $new_name = "Image2Array-${platform}-${{ matrix.arch }}-v${version}${{ matrix.suffix }}"
-        Move-Item dist/Image2Array${{ matrix.suffix }} $new_name
-      shell: pwsh
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Build executable
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow pyinstaller
+          
+          pyinstaller --onefile --name Image2Array \
+            --add-data 'originimage:originimage' \
+            --add-data 'image:image' \
+            script.py
+          
+          version=${GITHUB_REF#refs/tags/v}
+          mv dist/Image2Array "dist/Image2Array-macos-${{ matrix.arch }}-v$version"
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Image2Array-${{ runner.os }}-${{ matrix.arch }}
-        path: ${{ format('Image2Array-{0}-{1}-v{2}{3}', runner.os, matrix.arch, steps.version.outputs.version, matrix.suffix) }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: dist/Image2Array-macos-${{ matrix.arch }}-*
 
   create-release:
     name: Create Release
+    needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
-    needs: build
-    
     steps:
-    - name: Get version info
-      id: version
-      run: |
-        version=${GITHUB_REF#refs/tags/v}
-        echo "version=${version}" >> $GITHUB_OUTPUT
-        echo "full_tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Detect prerelease
-      id: prerelease
-      run: |
-        if [[ "${{ github.ref_name }}" == *"-beta"* ]] || [[ "${{ github.ref_name }}" == *"-rc"* ]]; then
-          echo "prerelease=true" >> $GITHUB_OUTPUT
-        else
-          echo "prerelease=false" >> $GITHUB_OUTPUT
-        fi
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-files
+          merge-multiple: true
 
-    - name: Get previous release
-      id: prev_release
-      run: |
-        response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/releases")
-        
-        latest_published=$(echo "$response" | jq -r '[.[] | select(.draft == false) | .tag_name][0]')
-        
-        if [ "$latest_published" = "null" ]; then
-          echo "prev_tag=" >> $GITHUB_OUTPUT
-        else
-          echo "prev_tag=$latest_published" >> $GITHUB_OUTPUT
-        fi
+      - name: Verify binaries
+        run: |
+          echo "=== File Verification ==="
+          ls -R release-files
+          
+          required_patterns=(
+            "Image2Array-windows-x86-v*.exe"
+            "Image2Array-windows-x64-v*.exe"
+            "Image2Array-linux-x64-v*"
+            "Image2Array-linux-arm64-v*"
+            "Image2Array-macos-x64-v*"
+            "Image2Array-macos-arm64-v*"
+          )
+          
+          for pattern in "${required_patterns[@]}"; do
+            if ! compgen -G "release-files/$pattern" > /dev/null; then
+              echo "❌ Missing file: $pattern"
+              exit 1
+            fi
+            echo "✅ Found: $(ls release-files/$pattern)"
+          done
 
-    - name: Generate changelog
-      id: changelog
-      run: |
-        if [ -z "${{ steps.prev_release.outputs.prev_tag }}" ]; then
-          LOG=$(git log --pretty=format:"- %s (%h)%n%b")
-        else
-          LOG=$(git log ${{ steps.prev_release.outputs.prev_tag }}..${{ github.ref }} --pretty=format:"- %s (%h)%n%b")
-        fi
+      - name: Detect release type
+        id: release-type
+        run: |
+          if [[ "${{ github.ref_name }}" == *"-beta"* ]]; then
+            echo "type=beta" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == *"-rc"* ]]; then
+            echo "type=release-candidate" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "type=stable" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
-        echo "changelog<<EOF" >> $GITHUB_OUTPUT
-        echo "### Changes since ${{ steps.prev_release.outputs.prev_tag || 'initial commit' }}" >> $GITHUB_OUTPUT
-        echo "$LOG" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+      - name: Generate changelog
+        id: changelog
+        run: |
+          git fetch --tags --force
+          current_tag="${{ github.ref_name }}"
+          previous_tag=$(git describe --tags --abbrev=0 "$current_tag^" 2>/dev/null || echo "")
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.ref }}
-        name: Image2Array ${{ steps.version.outputs.version }}
-        prerelease: ${{ steps.prerelease.outputs.prerelease }}
-        body: |
-          ### Release Type
-          ${{ format('{} Release', steps.prerelease.outputs.prerelease == 'true' && 'Preview' || 'Stable') }}
+          if [ -z "$previous_tag" ]; then
+            echo "Generating full changelog"
+            messages=$(git log --reverse --pretty=format:"- %s%n  ↳ Commit: %h (%an)%n%n%b")
+          else
+            echo "Generating changelog from $previous_tag to $current_tag"
+            messages=$(git log --reverse --pretty=format:"- %s%n  ↳ Commit: %h (%an)%n%n%b" "$previous_tag".."$current_tag")
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$messages" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          ### Supported Architectures
-          🖥️ Windows (x86, x64)  
-          🐧 Linux (x64, arm64)  
-          🍎 macOS (x64, arm64)
+      - name: Generate build info
+        id: build-info
+        run: |
+          echo "time=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+          echo "platforms=🖥️ Windows (x86/x64) | 🐧 Linux (x64/arm64) | 🍎 macOS (x64/arm64)" >> $GITHUB_OUTPUT
 
-          ### Build Info
-          🕒 Build Time: $(TZ=Asia/Shanghai date +"%Y-%m-%d %H:%M:%S %Z")  
-          🏷️ Version: ${{ steps.version.outputs.version }}  
-          📦 Full Tag: ${{ steps.version.outputs.full_tag }}  
-          📚 Commit: [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+      - uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: |
+            ${{ 
+              format('{0} {1}', 
+              steps.release-type.outputs.type == 'stable' && '🚀 Image2Array' || 
+              steps.release-type.outputs.type == 'beta' && '🧪 Image2Array BETA' || 
+              '🛡️ Image2Array RC',
+              github.ref_name
+              ) 
+            }}
+          prerelease: ${{ steps.release-type.outputs.prerelease }}
+          body: |
+            ## 📦 Multi-Platform Build
 
-          ${{ steps.changelog.outputs.changelog }}
-        files: |
-          artifacts/**/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ### Supported Architectures
+            ${{ steps.build-info.outputs.platforms }}
+
+            ### Release Type
+            ${{ 
+              format('**{} Release**', 
+              steps.release-type.outputs.type == 'stable' && 'Stable' || 
+              steps.release-type.outputs.type == 'beta' && 'Beta Testing' || 
+              'Release Candidate'
+              ) 
+            }}
+
+            ### 📝 Changelog
+            ${{ steps.changelog.outputs.changelog }}
+
+            ### 🛠️ Build Information
+            - 🕒 Build Time: ${{ steps.build-info.outputs.time }} (UTC+8)
+            - 🏷️ Version: ${{ github.ref_name }}
+            - 📌 Commit: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          files: |
+            release-files/*
