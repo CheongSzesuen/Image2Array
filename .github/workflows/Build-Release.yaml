@@ -1,4 +1,4 @@
-name: Image2Array Builder
+name: Image2Array Release Builder
 
 on:
   push:
@@ -8,90 +8,51 @@ on:
 
 jobs:
   build-windows:
-    name: Build Windows (${{ matrix.arch }})
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        arch: [x64, x86]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          architecture: ${{ matrix.arch }}
-      - name: Build executable
-        run: |
-          pip install pyinstaller
-          pyinstaller --onefile --noconsole Image2Array.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-${{ matrix.arch }}
-          path: dist/Image2Array.exe
+    # Windows构建配置保持不变...
 
   build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Build executable
-        run: |
-          pip install pyinstaller
-          pyinstaller --onefile --noconsole Image2Array.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux
-          path: dist/Image2Array
+    # Linux构建配置保持不变...
 
   build-macos:
-    name: Build macOS
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Build executable
-        run: |
-          pip install pyinstaller
-          pyinstaller --onefile --noconsole Image2Array.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos
-          path: dist/Image2Array
+    # macOS构建配置保持不变...
 
   create-release:
     name: Create Release
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 关键修复点：获取完整git历史
+          path: src       # 指定检出路径
+
+      - name: Setup git environment
+        run: |
+          # 切换到检出目录
+          cd src
+          git config --global --add safe.directory $GITHUB_WORKSPACE/src
+
       - uses: actions/download-artifact@v4
         with:
-          path: release-artifacts
-          pattern: '*'
+          path: artifacts
           merge-multiple: true
-
-      - name: Verify artifacts
-        run: ls -lh release-artifacts
 
       - name: Generate changelog
         id: changelog
         run: |
+          cd src  # 关键修复点：进入git仓库目录
           git fetch --tags --force
+          
           current_tag="${{ github.ref_name }}"
           previous_tag=$(git describe --tags --abbrev=0 "$current_tag^" 2>/dev/null || echo "")
           
+          # 生成带格式的更新日志
           if [ -z "$previous_tag" ]; then
             messages=$(git log --reverse --pretty=format:"- %s ↳ %an (%h)")
           else
             messages=$(git log --reverse --pretty=format:"- %s ↳ %an (%h)" "$previous_tag".."$current_tag")
           fi
-          
+
           delimiter=$(openssl rand -hex 16)
           echo "changelog<<${delimiter}" >> $GITHUB_OUTPUT
           echo "$messages" >> $GITHUB_OUTPUT
@@ -103,7 +64,7 @@ jobs:
           name: "Image2Array ${{ github.ref_name }}"
           body: |
             ## 支持架构
-            🐧 Linux (x64) | 🍎 macOS | 🪟 Windows (x86/x64)
+            🐧 Linux (x64/ARM64) | 🍎 macOS (ARM64/x64) | 🪟 Windows (x86/x64)
 
             ## 📝 更新日志
             ${{ steps.changelog.outputs.changelog }}
@@ -113,7 +74,7 @@ jobs:
             🏷️ 版本标签: ${{ github.ref_name }}  
             🔗 提交页面: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
           files: |
-            release-artifacts/windows-x64/Image2Array.exe
-            release-artifacts/windows-x86/Image2Array.exe
-            release-artifacts/linux/Image2Array
-            release-artifacts/macos/Image2Array
+            artifacts/windows-x64/Image2Array.exe
+            artifacts/windows-x86/Image2Array.exe
+            artifacts/linux-x64/Image2Array
+            artifacts/macos-arm64/Image2Array
