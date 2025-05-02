@@ -23,7 +23,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller PyQt5 pillow
+          pip install pyinstaller
+          pip install -r requirements.txt
 
       - name: Get version
         id: get_version
@@ -32,11 +33,11 @@ jobs:
 
       - name: Build Windows x64 EXE
         run: |
-          pyinstaller --onefile --windowed --name Image2Array-Windows-x64-${{ env.VERSION }} --distpath ./dist/x64 your_script_name.py
+          pyinstaller --onefile --windowed --name Image2Array-Windows-x64-${{ env.VERSION }} --distpath ./dist/x64 image_converter.py --hidden-import=PyQt5.sip
 
       - name: Build Windows x86 EXE
         run: |
-          pyinstaller --onefile --windowed --name Image2Array-Windows-x86-${{ env.VERSION }} --distpath ./dist/x86 --win-private-assemblies your_script_name.py
+          pyinstaller --onefile --windowed --name Image2Array-Windows-x86-${{ env.VERSION }} --distpath ./dist/x86 --win-private-assemblies image_converter.py --hidden-import=PyQt5.sip
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
