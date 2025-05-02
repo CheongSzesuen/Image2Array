@@ -1,9 +1,10 @@
-# TFT_LCD-ImageProcessing
+# Image2Array(I2A)
 >用于ST7735S驱动的TFT_LCD（128*160）屏幕图片的取模 
 
-由于在学习由ESP32 WROOM E为开发板的TFT_LCD1.8英寸屏幕驱动中遇到图片取模问题，而苦于既没有在线的转换也没有Linux下的转换软件，即便通过wine在Linux下使用windows的软件，还有正版注册和生成的C语言数组无法正确显示的问题。于是利用AI写了python脚本来实现取模，现在（2025.5.2 晚）上传GitHub。
+由于在学习由ESP32 WROOM E为开发板的TFT_LCD1.8英寸屏幕驱动中遇到图片取模问题，而苦于既没有在线的转换也没有Linux下的转换软件，即便通过wine在Linux下使用windows的软件，还有正版注册和生成的C语言数组无法正确显示的问题。于是利用AI写了python脚本来实现取模，现在（2025.5.2 晚）上传GitHub。决定长期开发脚本。
 ## 适用范围
 本脚本适合于ESP32 WROOM E为开发板，ST7735S驱动的TFT_LCD屏幕（尺寸为1.8英寸,RGB,128*160）的渲染图片的学习项目。
+之后会变为纯粹的取模脚本，拓展适用范围和平台。
 ### 硬件来源
 此LCD屏幕购于淘宝优信电子销量最高的那条链接。
 # 什么是取模？
@@ -68,14 +69,48 @@ RGBA8888、RGBA4444、ARGB1555、RGB332、BGR565/BGR888（BGR格式）、RGBX888
 ```sh
 pip install Pillow
 ```
+在linux和mac中可能需要开启dev，在dev里使用pip
 2. 运行脚本: 
 ```sh
-python image_to_RGB565.py
+python ImageProcessing.py
 ```
 3. 输入要转换的图片文件夹路径,脚本会自动转换文件夹内所有图片 
 4. 转换完成后,项目文件夹下会生成img.h文件,直接将该文件加入单片机程序使用即可 
 5. 在单片机程序中调用pushImage函数显示图片:
 ```
-#include "img.h"  
-tft.pushImage(0, 0, width, height, "pic1");
+#include "你的c语言文件和目标数组文件的路径"  
+tft.pushImage(0, 0, width, height, "填数组名称，不是数组文件名称");
 ```
+### 仓库文件结构
+```
+Image2Array/
+├── requirements.txt #python打包使用，请忽略
+├── Image2Array.py #主程序
+├── image_data.h #得到的数组
+└── originimage/
+    └── example.jpg #放入要转换的图片
+```
+
+## To-Do
+- [ ] 支持更多原始图片格式
+- [ ] 支持GUI
+- [ ] 打包为全平台
+- [ ] 支持更多取模灰度选择
+- [ ] 标准化文件结构
+- [ ] 支持不同取模顺序
+- [ ] 按照屏幕要求的字节顺序排列二进制位
+- [ ] 用户自定义转换名称和数组名称
+- [ ] 可设置屏幕宽高
+- [ ] 可自动获取不同开发板的FLASH来优化缩放
+- [ ] 支持裁切（自定义裁切）或不裁切（存疑，不知道怎么弄）
+- [ ] 支持批量转换，并能选择同一文件还是多个文件
+- [ ] 对windows支持右键添加快捷取模菜单
+- [ ] 选择输出数据类型（bin、c、bmp）
+- [ ] 支持调色板
+- [ ] 支持用户自定义保存路径以及是否每次选择
+- [ ] 支持亮度调整
+
+## 作者
+WaiJade(CheongSzesuen) with AI
+## 许可证
+遵循GPL-3.0 license
