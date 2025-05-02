@@ -15,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to get commit logs
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -55,30 +55,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to get commit logs
+          fetch-depth: 0
 
       - name: Get previous release tag
         id: get_previous_tag
         run: |
-          # Get the last release tag before the current one
           PREVIOUS_TAG=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" | \
             jq --arg current_tag "${{ github.ref_name }}" \
             '.[] | select(.tag_name | startswith("v") and .tag_name < $current_tag) | .tag_name' | \
             sort -V | tail -n 1 | tr -d '"')
-          echo "PREVIOUS_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
 
       - name: Generate release notes
         id: generate_release_notes
         run: |
           if [ -z "${{ env.PREVIOUS_TAG }}" ]; then
-            COMMIT_LOG=$(git log --format="* %s (%an) - %b\n" --no-merges --since="1 month ago")
+            COMMIT_LOG=$(git log --format="* %s (%an) - %b" --no-merges --since="1 month ago")
           else
-            COMMIT_LOG=$(git log --format="* %s (%an) - %b\n" --no-merges ${PREVIOUS_TAG}..HEAD)
+            COMMIT_LOG=$(git log --format="* %s (%an) - %b" --no-merges ${{ env.PREVIOUS_TAG }}..HEAD)
           fi
-          echo "RELEASE_NOTES=$(cat <<EOF
+          RELEASE_NOTES=$(cat << EOF
 # Image2Array v${{ env.VERSION }}
 
 ## 更新内容
@@ -86,10 +84,11 @@ jobs:
 ${COMMIT_LOG}
 
 ## 构建信息
-- **构建时间**: ${{ github.run_started }}  
-- **构建页面**: [查看构建页面](${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})  
+- **构建时间**: ${{ github.run_started_at }}  
+- **构建页面**: [查看构建页面](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})  
 EOF
-)" >> $GITHUB_ENV
+          )
+          echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
 
       - name: Create Release
         id: create_release
@@ -98,11 +97,16 @@ EOF
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          target_commitish: ${{ github.sha }}
           release_name: Image2Array v${{ env.VERSION }}
           body: ${{ env.RELEASE_NOTES }}
-          draft: false  # Set to true if you want to create a draft release
-          prerelease: false  # Set to true if this is a pre-release
+          draft: false
+          prerelease: false
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Image2Array-EXE
+          path: ./dist/
 
       - name: Upload EXE to Release
         uses: actions/upload-release-asset@v1
