@@ -67,13 +67,13 @@ jobs:
           pip install pyinstaller==6.7.0
 
       - name: 构建可执行文件
-        shell: ${{ matrix.shell }}
+        shell: ${{ matrix.config.shell }}
         run: |
-          pyinstaller --onefile --noconsole ${{ matrix.line_continuation }} \
-            --name ${{ matrix.exe_name }}-${{ env.VERSION }} ${{ matrix.line_continuation }} \
-            --hidden-import PyQt5.QtCore ${{ matrix.line_continuation }} \
-            --hidden-import PyQt5.QtGui ${{ matrix.line_continuation }} \
-            --hidden-import PyQt5.QtWidgets ${{ matrix.line_continuation }} \
+          pyinstaller --onefile --noconsole ${{ matrix.config.line_continuation }} \
+            --name ${{ matrix.config.exe_name }}-${{ env.VERSION }} \
+            --hidden-import PyQt5.QtCore \
+            --hidden-import PyQt5.QtGui \
+            --hidden-import PyQt5.QtWidgets \
             --add-data "venv/Lib/site-packages/PyQt5/Qt5/plugins:PyQt5/Qt5/plugins" \
             image_converter.py
 
@@ -81,13 +81,13 @@ jobs:
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             codesign --deep --force --verbose \
               --sign "Apple Development" \
-              dist/${{ matrix.exe_name }}-${{ env.VERSION }}
+              dist/${{ matrix.config.exe_name }}-${{ env.VERSION }}
           fi
 
       - name: 打包成果
         run: |
           mkdir -p dist/${{ runner.os }}
-          mv dist/${{ matrix.exe_name }}-${{ env.VERSION }}* dist/${{ runner.os }}/
+          mv dist/${{ matrix.config.exe_name }}-${{ env.VERSION }}* dist/${{ runner.os }}/
 
       - name: 上传制品
         uses: actions/upload-artifact@v4
@@ -119,12 +119,10 @@ jobs:
 
       - name: 创建 GitHub Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: Image2Array v${{ env.VERSION }}
+          name: Image2Array v${{ env.VERSION }}
           body: |
             ## 更新内容
             ${{ steps.changelog.outputs.changelog }}
@@ -133,14 +131,9 @@ jobs:
             - Windows x64/x86
             - Linux x64
             - macOS ARM64
-          draft: false
-          prerelease: false
+          files: |
+            dist/**/*
 
-      - name: 上传所有文件到 Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/**/*
-          asset_name: ${{ fromJson('["' + (asset_path | split('/') | last + '"') }}
+      - name: 上传失败清理
+        if: failure()
+        run: rm -rf dist
