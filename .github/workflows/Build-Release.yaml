@@ -53,10 +53,10 @@ jobs:
       - name: 安装系统依赖
         if: matrix.os != 'windows-latest'
         run: |
-          if [[ "${{ matrix.os }}" == *"ubuntu"* ]]; then
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
             sudo apt-get update
             sudo apt-get install -y libxcb-xinerama0
-          elif [[ "${{ matrix.os }}" == *"macos"* ]]; then
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
             brew install libomp
           fi
 
@@ -78,22 +78,22 @@ jobs:
             image_converter.py
 
           # macOS 签名 (可选)
-          if [[ "${{ matrix.os }}" == *"macos"* ]]; then
-            codesign --deep --force --verbose ${{ matrix.line_continuation }} \
-              --sign "Apple Development" ${{ matrix.line_continuation }} \
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            codesign --deep --force --verbose \
+              --sign "Apple Development" \
               dist/${{ matrix.exe_name }}-${{ env.VERSION }}
           fi
 
       - name: 打包成果
         run: |
-          mkdir -p dist/${{ matrix.os }}
-          mv dist/${{ matrix.exe_name }}-${{ env.VERSION }}* dist/${{ matrix.os }}/
+          mkdir -p dist/${{ runner.os }}
+          mv dist/${{ matrix.exe_name }}-${{ env.VERSION }}* dist/${{ runner.os }}/
 
       - name: 上传制品
         uses: actions/upload-artifact@v4
         with:
           name: binaries
-          path: dist/${{ matrix.os }}/*
+          path: dist/${{ runner.os }}/*
 
   publish:
     name: Create Release
@@ -143,4 +143,4 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/**/*
-          asset_name: ${{ basename(asset_path) }}
+          asset_name: ${{ fromJson('["' + (asset_path | split('/') | last + '"') }}
