@@ -16,26 +16,26 @@ jobs:
           - os: windows-latest
             arch: x64
             exe_name: Image2Array-Windows-x64
-            shell: cmd
+            shell_type: cmd  # 修改为更明确的变量名
             line_continuation: "^"
           - os: windows-latest
             arch: x86
             exe_name: Image2Array-Windows-x86
-            shell: cmd
+            shell_type: cmd
             line_continuation: "^"
 
           # Linux 构建
           - os: ubuntu-22.04
             arch: x64
             exe_name: Image2Array-Linux-x64
-            shell: bash
+            shell_type: bash
             line_continuation: '\'
 
           # macOS 构建
           - os: macos-14
             arch: arm64
             exe_name: Image2Array-macOS-arm64
-            shell: bash
+            shell_type: bash
             line_continuation: '\'
 
     steps:
@@ -67,7 +67,7 @@ jobs:
           pip install pyinstaller==6.7.0
 
       - name: 构建可执行文件
-        shell: ${{ matrix.shell }}
+        shell: ${{ matrix.shell_type }}  # 使用修改后的变量名
         run: |
           pyinstaller --onefile --noconsole ${{ matrix.line_continuation }} \
             --name ${{ matrix.exe_name }}-${{ env.VERSION }} \
