@@ -20,13 +20,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Get version (Bash)
+      - name: Get version
         id: get_version
-        shell: bash  # 关键修复点
+        shell: bash
         run: |
           echo "VERSION=$(echo ${{ github.ref }} | sed -e 's/.*v//')" >> $GITHUB_ENV
 
       - name: Build x64 EXE
+        shell: cmd  # 关键修复点
         run: |
           pyinstaller --onefile --windowed ^
             --name Image2Array-Windows-x64-${{ env.VERSION }} ^
@@ -35,6 +36,7 @@ jobs:
             --hidden-import=PyQt5.sip
 
       - name: Build x86 EXE
+        shell: cmd  # 关键修复点
         run: |
           pyinstaller --onefile --windowed ^
             --name Image2Array-Windows-x86-${{ env.VERSION }} ^
