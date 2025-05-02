@@ -48,7 +48,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          architecture: ${{ matrix.arch == 'x86' && 'x86' || 'x64' }}
+          architecture: ${{ contains(matrix.arch, 'x86') && 'x86' || 'x64' }}
 
       - name: 安装系统依赖
         if: matrix.os != 'windows-latest'
@@ -67,10 +67,10 @@ jobs:
           pip install pyinstaller==6.7.0
 
       - name: 构建可执行文件
-        shell: ${{ matrix.config.shell }}
+        shell: ${{ matrix.shell }}
         run: |
-          pyinstaller --onefile --noconsole ${{ matrix.config.line_continuation }} \
-            --name ${{ matrix.config.exe_name }}-${{ env.VERSION }} \
+          pyinstaller --onefile --noconsole ${{ matrix.line_continuation }} \
+            --name ${{ matrix.exe_name }}-${{ env.VERSION }} \
             --hidden-import PyQt5.QtCore \
             --hidden-import PyQt5.QtGui \
             --hidden-import PyQt5.QtWidgets \
@@ -81,13 +81,13 @@ jobs:
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             codesign --deep --force --verbose \
               --sign "Apple Development" \
-              dist/${{ matrix.config.exe_name }}-${{ env.VERSION }}
+              dist/${{ matrix.exe_name }}-${{ env.VERSION }}
           fi
 
       - name: 打包成果
         run: |
           mkdir -p dist/${{ runner.os }}
-          mv dist/${{ matrix.config.exe_name }}-${{ env.VERSION }}* dist/${{ runner.os }}/
+          mv dist/${{ matrix.exe_name }}-${{ env.VERSION }}* dist/${{ runner.os }}/
 
       - name: 上传制品
         uses: actions/upload-artifact@v4
@@ -118,7 +118,6 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 创建 GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
@@ -132,8 +131,6 @@ jobs:
             - Linux x64
             - macOS ARM64
           files: |
-            dist/**/*
-
-      - name: 上传失败清理
-        if: failure()
-        run: rm -rf dist
+            dist/windows-latest/Image2Array-Windows-*
+            dist/ubuntu-22.04/Image2Array-Linux-*
+            dist/macos-14/Image2Array-macOS-*
