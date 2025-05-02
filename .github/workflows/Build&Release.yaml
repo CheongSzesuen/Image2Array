@@ -16,17 +16,17 @@ jobs:
           - os: windows-latest
             arch: x86
             suffix: .exe
-            pyarch: 32
+            pyarch: x86
           - os: windows-latest
             arch: x64
             suffix: .exe
-            pyarch: 64
+            pyarch: x64
           
           # Linux builds
           - os: ubuntu-latest
             arch: x64
             suffix: ''
-            pyarch: 64
+            pyarch: x64
           - os: ubuntu-latest
             arch: arm64
             suffix: ''
@@ -36,7 +36,7 @@ jobs:
           - os: macos-latest
             arch: x64
             suffix: ''
-            pyarch: 64
+            pyarch: x64
           - os: macos-latest
             arch: arm64
             suffix: ''
@@ -46,11 +46,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Debug Info
+      run: |
+        echo "Runner OS: ${{ runner.os }}"
+        echo "Matrix Arch: ${{ matrix.arch }}"
+        echo "Python Arch: ${{ matrix.pyarch }}"
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
         architecture: ${{ matrix.pyarch }}
+
+    - name: Verify Python
+      run: |
+        python --version
+        which python
 
     - name: Install dependencies
       run: |
@@ -70,7 +81,7 @@ jobs:
       run: |
         $version = "${{ github.ref_name }}".Replace("v", "")
         $platform = "${{ runner.os }}" -replace "macOS", "macos"
-        if ("${{ runner.os }}" -eq "Windows") { $platform = "Windows" }
+        $platform = $platform -replace "Ubuntu", "linux"
         $new_name = "Image2Array-${platform}-${{ matrix.arch }}-v${version}${{ matrix.suffix }}"
         Move-Item dist/Image2Array${{ matrix.suffix }} $new_name
       shell: pwsh
@@ -87,46 +98,71 @@ jobs:
     needs: build
     
     steps:
-    - name: Get version
+    - name: Get version info
       id: version
-      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      run: |
+        version=${GITHUB_REF#refs/tags/v}
+        echo "version=${version}" >> $GITHUB_OUTPUT
+        echo "full_tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
+    - name: Detect prerelease
+      id: prerelease
+      run: |
+        if [[ "${{ github.ref_name }}" == *"-beta"* ]] || [[ "${{ github.ref_name }}" == *"-rc"* ]]; then
+          echo "prerelease=true" >> $GITHUB_OUTPUT
+        else
+          echo "prerelease=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Get previous release
+      id: prev_release
+      run: |
+        response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/releases")
+        
+        latest_published=$(echo "$response" | jq -r '[.[] | select(.draft == false) | .tag_name][0]')
+        
+        if [ "$latest_published" = "null" ]; then
+          echo "prev_tag=" >> $GITHUB_OUTPUT
+        else
+          echo "prev_tag=$latest_published" >> $GITHUB_OUTPUT
+        fi
 
     - name: Generate changelog
       id: changelog
       run: |
-        PREV_TAG=$(git describe --tags --abbrev=0 ${{ github.ref }}^ 2>/dev/null || echo "")
-        if [ -z "$PREV_TAG" ]; then
+        if [ -z "${{ steps.prev_release.outputs.prev_tag }}" ]; then
           LOG=$(git log --pretty=format:"- %s (%h)%n%b")
         else
-          LOG=$(git log $PREV_TAG..${{ github.ref }} --pretty=format:"- %s (%h)%n%b")
+          LOG=$(git log ${{ steps.prev_release.outputs.prev_tag }}..${{ github.ref }} --pretty=format:"- %s (%h)%n%b")
         fi
+
         echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "### Changes since ${{ steps.prev_release.outputs.prev_tag || 'initial commit' }}" >> $GITHUB_OUTPUT
         echo "$LOG" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
-      shell: bash
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref }}
         name: Image2Array ${{ steps.version.outputs.version }}
+        prerelease: ${{ steps.prerelease.outputs.prerelease }}
         body: |
+          ### Release Type
+          ${{ format('{} Release', steps.prerelease.outputs.prerelease == 'true' && 'Preview' || 'Stable') }}
+
           ### Supported Architectures
-          🖥️ Windows (x86, x64)
-          🐧 Linux (x64, arm64)
+          🖥️ Windows (x86, x64)  
+          🐧 Linux (x64, arm64)  
           🍎 macOS (x64, arm64)
 
           ### Build Info
-          🕒 Build Time: $(TZ=Asia/Shanghai date +"%Y-%m-%d %H:%M:%S %Z")
-          🏷️ Version: ${{ steps.version.outputs.version }}
+          🕒 Build Time: $(TZ=Asia/Shanghai date +"%Y-%m-%d %H:%M:%S %Z")  
+          🏷️ Version: ${{ steps.version.outputs.version }}  
+          📦 Full Tag: ${{ steps.version.outputs.full_tag }}  
           📚 Commit: [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
 
-          ### Changelog
           ${{ steps.changelog.outputs.changelog }}
         files: |
           artifacts/**/*
