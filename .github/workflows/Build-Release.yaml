@@ -64,33 +64,44 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" | \
             jq --arg current_tag "${{ github.ref_name }}" \
-            '.[] | select(.tag_name | startswith("v") and .tag_name < $current_tag) | .tag_name' | \
-            sort -V | tail -n 1 | tr -d '"')
+            '[.[] | select(.tag_name | startswith("v"))] | map(select(.tag_name < $current_tag)) | sort_by(.tag_name) | last | .tag_name' \
+            | tr -d '"')
           echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
 
       - name: Generate release notes
         id: generate_release_notes
         run: |
-          if [ -z "${{ env.PREVIOUS_TAG }}" ]; then
-            COMMIT_LOG=$(git log --format="* %s (%an) - %b" --no-merges --since="1 month ago")
+          # 获取提交日志
+          if [[ -z "${{ env.PREVIOUS_TAG }}" ]]; then
+            COMMIT_LOG=$(git log --format="- %s [%an]%n  %b" --no-merges --since="1 month ago")
           else
-            COMMIT_LOG=$(git log --format="* %s (%an) - %b" --no-merges ${{ env.PREVIOUS_TAG }}..HEAD)
+            COMMIT_LOG=$(git log --format="- %s [%an]%n  %b" --no-merges ${{ env.PREVIOUS_TAG }}..HEAD)
           fi
-          RELEASE_NOTES=$(cat << "EOF"
-# Image2Array v${{ env.VERSION }}
 
-## 更新内容
+          # 准备变量
+          VERSION="${{ env.VERSION }}"
+          RUN_TIME=$(date -d "${{ github.run_started_at }}" "+%Y年%m月%d日 %H:%M UTC")
+          RUN_LINK="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # 生成多行Release Notes（关键修复部分）
+          RELEASE_BODY=$(cat << RELEASE_EOF
+## 🚀 新版本 v${VERSION}
+
+### 📝 更新内容
 
 ${COMMIT_LOG}
 
-## 构建信息
-- **构建时间**: ${{ github.run_started_at }}  
-- **构建页面**: [查看构建页面](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-EOF
+### 🛠️ 构建信息
+- **构建时间**: ${RUN_TIME}
+- **构建详情**: [点击查看](${RUN_LINK})
+RELEASE_EOF
           )
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          echo "$RELEASE_NOTES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+
+          # 写入环境变量（GitHub官方推荐方式）
+          delimiter="EOF_$(openssl rand -hex 8)"
+          echo "RELEASE_BODY<<${delimiter}" >> $GITHUB_ENV
+          echo "${RELEASE_BODY}" >> $GITHUB_ENV
+          echo "${delimiter}" >> $GITHUB_ENV
 
       - name: Create Release
         id: create_release
@@ -100,7 +111,7 @@ EOF
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Image2Array v${{ env.VERSION }}
-          body: ${{ env.RELEASE_NOTES }}
+          body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
 
