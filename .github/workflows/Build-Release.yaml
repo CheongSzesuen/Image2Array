@@ -21,42 +21,36 @@ jobs:
             arch: x64
             suffix: .exe
             pyarch: x64
-          
+            
           # Linux builds
           - os: ubuntu-latest
             arch: x64
             suffix: ''
-            pyarch: x64
+            pyarch: x86_64 # 使用通用的 x86_64 架构标识
           - os: ubuntu-latest
             arch: arm64
             suffix: ''
-            pyarch: arm64
-          
+            pyarch: aarch64 # 使用通用的 aarch64 架构标识
+            
           # macOS builds
           - os: macos-latest
             arch: x64
             suffix: ''
-            pyarch: x64
+            pyarch: x86_64
           - os: macos-latest
             arch: arm64
             suffix: ''
             pyarch: arm64
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Debug Info
-      run: |
-        echo "Runner OS: ${{ runner.os }}"
-        echo "Matrix Arch: ${{ matrix.arch }}"
-        echo "Python Arch: ${{ matrix.pyarch }}"
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Setup Python
+      uses: actions/setup-python@v4
       with:
         python-version: '3.10'
         architecture: ${{ matrix.pyarch }}
+        cache: 'pip' # 启用 pip 缓存以提高效率
 
     - name: Verify Python
       run: |
