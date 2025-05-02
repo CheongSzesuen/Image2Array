@@ -6,50 +6,20 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
-jobs:
-  validate-structure:
-    name: Validate Structure
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check project structure
-        run: |
-          echo "当前目录结构:"
-          ls -R
-          
-          # 仅验证必要文件存在
-          required_files=(
-            "requirements.txt"
-            "Image2Array.py"
-          )
-          
-          missing=0
-          for file in "${required_files[@]}"; do
-            if [ ! -f "$file" ]; then
-              echo "❌ 缺失必要文件: $file"
-              missing=1
-            else
-              echo "✅ 文件存在: $file"
-            fi
-          done
-          
-          if [ $missing -ne 0 ]; then
-            exit 1
-          fi
-          echo "✅ 项目结构验证通过"
+env:
+  PYQT_VERSION: 5.15.16  # 使用最新的兼容版本
 
+jobs:
   build-windows:
     name: Build Windows (${{ matrix.arch }})
     runs-on: windows-latest
-    needs: validate-structure
     strategy:
       matrix:
         arch: [x64, x86]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python ${{ matrix.arch }}
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
@@ -57,22 +27,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          python -m pip install --upgrade pip==24.0
+          pip install pyinstaller==6.13.0
+          pip install pillow==11.2.1
+          pip install PyQt5==5.15.11 PyQt5-Qt5==${{ env.PYQT_VERSION }}
 
-      - name: Build executable
+      - name: Build executable (Windows)
+        shell: cmd  # 强制使用CMD解释器
         run: |
           pyinstaller --onefile --noconsole ^
-            --name Image2Array-Windows-${{ matrix.arch }} ^
-            --add-data "image_data.h;." ^  # 只包含生成的.h文件
-            Image2Array.py
-
-      - name: Package artifacts
-        run: |
-          $version = $env:GITHUB_REF_NAME.Substring(1)
-          Rename-Item -Path "dist/Image2Array-Windows-${{ matrix.arch }}.exe" `
-            -NewName "Image2Array-Windows-${{ matrix.arch }}-v$version.exe"
+          --name Image2Array-Windows-${{ matrix.arch }} ^
+          --add-data "image_data.h;." ^
+          Image2Array.py
 
       - uses: actions/upload-artifact@v4
         with:
@@ -81,73 +47,64 @@ jobs:
 
   build-linux:
     name: Build Linux
-    runs-on: ubuntu-latest
-    needs: validate-structure
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          sudo apt-get install -y python3-dev
+          python -m pip install --upgrade pip==24.0
+          pip install pyinstaller==6.13.0
+          pip install pillow==11.2.1
+          pip install PyQt5==5.15.11 PyQt5-Qt5==${{ env.PYQT_VERSION }}
 
-      - name: Build executable
+      - name: Build executable (Linux)
         run: |
           pyinstaller --onefile --noconsole \
             --name Image2Array-Linux \
-            --add-data "image_data.h:." \  # 只包含生成的.h文件
+            --add-data "image_data.h:." \
             Image2Array.py
-
-      - name: Package artifacts
-        run: |
-          version=${GITHUB_REF#refs/tags/v}
-          mv dist/Image2Array-Linux "dist/Image2Array-Linux-v$version"
-          chmod +x "dist/Image2Array-Linux-v$version"
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux-binary
-          path: dist/Image2Array-Linux-*
+          path: dist/Image2Array-Linux
 
   build-macos:
     name: Build macOS
-    runs-on: macos-latest
-    needs: validate-structure
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install dependencies (macOS)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          python -m pip install --upgrade pip==24.0
+          pip install pyinstaller==6.13.0
+          pip install pillow==11.2.1
+          pip install PyQt5==5.15.11 PyQt5-Qt5==${{ env.PYQT_VERSION }}
 
-      - name: Build executable
+      - name: Build executable (macOS)
         run: |
           pyinstaller --onefile --noconsole \
             --name Image2Array-macOS \
-            --add-data "image_data.h:." \  # 只包含生成的.h文件
+            --add-data "image_data.h:." \
             Image2Array.py
-
-      - name: Package artifacts
-        run: |
-          version=${GITHUB_REF#refs/tags/v}
-          mv dist/Image2Array-macOS "dist/Image2Array-macOS-v$version"
-          chmod +x "dist/Image2Array-macOS-v$version"
 
       - uses: actions/upload-artifact@v4
         with:
           name: macos-binary
-          path: dist/Image2Array-macOS-*
+          path: dist/Image2Array-macOS
 
   create-release:
     name: Create Release
@@ -157,39 +114,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: release-artifacts
-          merge-multiple: true
-
-      - name: Verify files
-        run: |
-          echo "=== 生成文件列表 ==="
-          find release-artifacts -type f -exec ls -lh {} \;
-          
-          echo "=== 文件类型验证 ==="
-          find release-artifacts -type f -exec file {} \;
 
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: "Image2Array ${{ github.ref_name }}"
-          body: |
-            ## 版本发布说明
-
-            ### 包含文件
-            - 🪟 Windows 可执行文件 (x86/x64)
-            - 🐧 Linux 可执行文件
-            - 🍎 macOS 可执行文件
-
-            ### 使用说明
-            1. 下载对应平台的可执行文件
-            2. 创建 originimage 目录并放入需要转换的图片
-            3. 运行程序自动生成 image_data.h
-          
-            ### 注意
-            📌 需要自行准备图片文件，程序运行时自动从 originimage 目录读取
-
-            ### 构建信息
-            - 版本号: ${{ github.ref_name }}
-            - 构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
           files: |
             release-artifacts/windows-binaries/*
             release-artifacts/linux-binary/*
