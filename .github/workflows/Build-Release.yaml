@@ -20,6 +20,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+          python -m pip install -r requirements.txt
+          echo "PATH=$env:APPDATA\Python\Python311\Scripts;$env:PATH" >> $env:GITHUB_ENV
+
       - name: Get version
         id: get_version
         shell: bash
@@ -27,7 +34,7 @@ jobs:
           echo "VERSION=$(echo ${{ github.ref }} | sed -e 's/.*v//')" >> $GITHUB_ENV
 
       - name: Build x64 EXE
-        shell: cmd  # 关键修复点
+        shell: cmd
         run: |
           pyinstaller --onefile --windowed ^
             --name Image2Array-Windows-x64-${{ env.VERSION }} ^
@@ -36,7 +43,7 @@ jobs:
             --hidden-import=PyQt5.sip
 
       - name: Build x86 EXE
-        shell: cmd  # 关键修复点
+        shell: cmd
         run: |
           pyinstaller --onefile --windowed ^
             --name Image2Array-Windows-x86-${{ env.VERSION }} ^
