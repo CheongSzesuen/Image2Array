@@ -136,14 +136,16 @@ jobs:
         run: |
           echo "Artifacts directory structure:"
           ls -R artifacts
-          echo "Checking files exist:"
+          echo "Current working directory: $(pwd)"
           TAG=${{ github.ref_name }}
+          echo "Current tag: $TAG"
           
           # 检查 Windows x64 文件
           if [ -f "./artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ]; then
             echo "Windows x64 OK"
           else
             echo "Windows x64 NOT FOUND"
+            ls -l "./artifacts/windows-x64/"
             exit 1
           fi
           
@@ -152,6 +154,7 @@ jobs:
             echo "Windows x86 OK"
           else
             echo "Windows x86 NOT FOUND"
+            ls -l "./artifacts/windows-x86/"
             exit 1
           fi
           
@@ -160,6 +163,7 @@ jobs:
             echo "Linux x64 OK"
           else
             echo "Linux x64 NOT FOUND"
+            ls -l "./artifacts/linux-x64/"
             exit 1
           fi
           
@@ -168,6 +172,7 @@ jobs:
             echo "Linux ARM64 OK"
           else
             echo "Linux ARM64 NOT FOUND"
+            ls -l "./artifacts/linux-arm64/"
             exit 1
           fi
           
@@ -176,6 +181,7 @@ jobs:
             echo "macOS x64 OK"
           else
             echo "macOS x64 NOT FOUND"
+            ls -l "./artifacts/macos-x64/"
             exit 1
           fi
           
@@ -184,6 +190,7 @@ jobs:
             echo "macOS ARM64 OK"
           else
             echo "macOS ARM64 NOT FOUND"
+            ls -l "./artifacts/macos-arm64/"
             exit 1
           fi
 
