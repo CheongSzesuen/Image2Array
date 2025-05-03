@@ -175,3 +175,4 @@ if __name__ == "__main__":
     ex = ImageConverterApp()
     ex.show()
     app.exec_()
+#麻了，修了一天,用ds才修好action，准备发布0.3.0
