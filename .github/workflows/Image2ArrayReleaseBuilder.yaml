@@ -32,15 +32,16 @@ jobs:
       - name: Build executable
         shell: cmd
         run: |
+          TAG="${{ github.ref_name }}"
           pyinstaller --onefile --noconsole ^
-            --name Image2Array-${{ matrix.arch }} ^
+            --name Image2Array-${{ matrix.arch }}-${TAG} ^
             --add-data "originimage;originimage" ^
             Image2Array.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{ matrix.arch }}
-          path: dist/Image2Array-${{ matrix.arch }}.exe
+          path: dist/Image2Array-${{ matrix.arch }}-${TAG}.exe
 
   build-linux:
     name: Build Linux (${{ matrix.arch }})
@@ -67,15 +68,16 @@ jobs:
 
       - name: Build executable
         run: |
+          TAG="${{ github.ref_name }}"
           pyinstaller --onefile --noconsole \
-            --name Image2Array-${{ matrix.arch }} \
+            --name Image2Array-${{ matrix.arch }}-${TAG} \
             --add-data "originimage:originimage" \
             Image2Array.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.arch }}
-          path: dist/Image2Array-${{ matrix.arch }}
+          path: dist/Image2Array-${{ matrix.arch }}-${TAG}
 
   build-macos:
     name: Build macOS (${{ matrix.arch }})
@@ -97,15 +99,16 @@ jobs:
 
       - name: Build executable
         run: |
+          TAG="${{ github.ref_name }}"
           pyinstaller --onefile --noconsole \
-            --name Image2Array-${{ matrix.arch }} \
+            --name Image2Array-${{ matrix.arch }}-${TAG} \
             --add-data "originimage:originimage" \
             Image2Array.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.arch }}
-          path: dist/Image2Array-${{ matrix.arch }}
+          path: dist/Image2Array-${{ matrix.arch }}-${TAG}
 
   create-release:
     name: Create Release
@@ -134,22 +137,24 @@ jobs:
           echo "Artifacts directory structure:"
           ls -R artifacts
           echo "Checking files exist:"
-          [ -f "artifacts/windows-x64/Image2Array-x64.exe" ] && echo "Windows x64 OK" || exit 1
-          [ -f "artifacts/windows-x86/Image2Array-x86.exe" ] && echo "Windows x86 OK" || exit 1
-          [ -f "artifacts/linux-x64/Image2Array-x64" ] && echo "Linux x64 OK" || exit 1
-          [ -f "artifacts/linux-arm64/Image2Array-arm64" ] && echo "Linux ARM64 OK" || exit 1
-          [ -f "artifacts/macos-x64/Image2Array-x64" ] && echo "macOS x64 OK" || exit 1
-          [ -f "artifacts/macos-arm64/Image2Array-arm64" ] && echo "macOS ARM64 OK" || exit 1
+          TAG="${{ github.ref_name }}"
+          [ -f "artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ] && echo "Windows x64 OK" || exit 1
+          [ -f "artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ] && echo "Windows x86 OK" || exit 1
+          [ -f "artifacts/linux-x64/Image2Array-x64-${TAG}" ] && echo "Linux x64 OK" || exit 1
+          [ -f "artifacts/linux-arm64/Image2Array-arm64-${TAG}" ] && echo "Linux ARM64 OK" || exit 1
+          [ -f "artifacts/macos-x64/Image2Array-x64-${TAG}" ] && echo "macOS x64 OK" || exit 1
+          [ -f "artifacts/macos-arm64/Image2Array-arm64-${TAG}" ] && echo "macOS ARM64 OK" || exit 1
 
       - name: Prepare release assets
         run: |
           mkdir -p release_assets
-          cp artifacts/windows-x64/Image2Array-x64.exe release_assets/Image2Array-windows-x64.exe
-          cp artifacts/windows-x86/Image2Array-x86.exe release_assets/Image2Array-windows-x86.exe
-          cp artifacts/linux-x64/Image2Array-x64 release_assets/Image2Array-linux-x64
-          cp artifacts/linux-arm64/Image2Array-arm64 release_assets/Image2Array-linux-arm64
-          cp artifacts/macos-x64/Image2Array-x64 release_assets/Image2Array-macos-x64
-          cp artifacts/macos-arm64/Image2Array-arm64 release_assets/Image2Array-macos-arm64
+          TAG="${{ github.ref_name }}"
+          cp artifacts/windows-x64/Image2Array-x64-${TAG}.exe release_assets/Image2Array-windows-x64-${TAG}.exe
+          cp artifacts/windows-x86/Image2Array-x86-${TAG}.exe release_assets/Image2Array-windows-x86-${TAG}.exe
+          cp artifacts/linux-x64/Image2Array-x64-${TAG} release_assets/Image2Array-linux-x64-${TAG}
+          cp artifacts/linux-arm64/Image2Array-arm64-${TAG} release_assets/Image2Array-linux-arm64-${TAG}
+          cp artifacts/macos-x64/Image2Array-x64-${TAG} release_assets/Image2Array-macos-x64-${TAG}
+          cp artifacts/macos-arm64/Image2Array-arm64-${TAG} release_assets/Image2Array-macos-arm64-${TAG}
           chmod +x release_assets/Image2Array-linux-*
           chmod +x release_assets/Image2Array-macos-*
           ls -lh release_assets/
@@ -217,9 +222,9 @@ jobs:
             🏷️ 版本标签: ${{ github.ref_name }}  
             🔗 提交页面: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
           files: |
-            release_assets/Image2Array-windows-x64.exe
-            release_assets/Image2Array-windows-x86.exe
-            release_assets/Image2Array-linux-x64
-            release_assets/Image2Array-linux-arm64
-            release_assets/Image2Array-macos-x64
-            release_assets/Image2Array-macos-arm64
+            release_assets/Image2Array-windows-x64-${{ github.ref_name }}.exe
+            release_assets/Image2Array-windows-x86-${{ github.ref_name }}.exe
+            release_assets/Image2Array-linux-x64-${{ github.ref_name }}
+            release_assets/Image2Array-linux-arm64-${{ github.ref_name }}
+            release_assets/Image2Array-macos-x64-${{ github.ref_name }}
+            release_assets/Image2Array-macos-arm64-${{ github.ref_name }}
