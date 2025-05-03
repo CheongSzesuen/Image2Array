@@ -154,6 +154,23 @@ jobs:
           chmod +x release_assets/Image2Array-macos-*
           ls -lh release_assets/
 
+      - name: Determine release type
+        id: release-type
+        run: |
+          TAG="${{ github.ref_name }}"
+          
+          if [[ "$TAG" == *-beta* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "release_type=预发布版本（Beta）" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *-rc ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "release_type=预发布版本（Release Candidate）" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "release_type=正式版本（Stable）" >> $GITHUB_OUTPUT
+          fi
+          echo "Detected release type: ${{ steps.release-type.outputs.release_type }}"
+
       - name: Generate changelog
         id: changelog
         run: |
@@ -174,23 +191,6 @@ jobs:
           echo "$messages" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
 
-      - name: Determine release type
-        id: release-type
-        run: |
-          TAG="${{ github.ref_name }}"
-          
-          if [[ "$TAG" == *-beta* ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-            echo "release_type=Beta" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == *-rc ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-            echo "release_type=Release Candidate" >> $GITHUB_OUTPUT
-          else
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-            echo "release_type=Stable" >> $GITHUB_OUTPUT
-          fi
-          echo "Detected release type: ${{ steps.release-type.outputs.release_type }}"
-
       - name: Get Beijing time
         id: time
         run: |
@@ -204,7 +204,7 @@ jobs:
           prerelease: ${{ steps.release-type.outputs.is_prerelease }}
           body: |
             ## 发布类型
-            ${{ steps.release-type.outputs.is_prerelease == 'true' && steps.release-type.outputs.release_type == 'Beta' ? '预发布版本（Beta）' : steps.release-type.outputs.is_prerelease == 'true' ? '预发布版本（Release Candidate）' : '正式版本（Stable）' }}
+            ${{ steps.release-type.outputs.release_type }}
 
             ## 支持架构
             🐧 Linux (x64/ARM64) | 🍎 macOS (ARM64/x64) | 🪟 Windows (x86/x64)
