@@ -164,9 +164,9 @@ jobs:
           previous_tag=$(git describe --tags --abbrev=0 "$current_tag^" 2>/dev/null || echo "")
           
           if [ -z "$previous_tag" ]; then
-            messages=$(git log --reverse --pretty=format:"- %s ↳ %an (%h)")
+            messages=$(git log --reverse --pretty=format:"- %s ↳ %an (%h)\n%b")
           else
-            messages=$(git log --reverse --pretty=format:"- %s ↳ %an (%h)" "$previous_tag".."$current_tag")
+            messages=$(git log --reverse --pretty=format:"- %s ↳ %an (%h)\n%b" "$previous_tag".."$current_tag")
           fi
 
           delimiter=$(openssl rand -hex 16)
@@ -204,7 +204,7 @@ jobs:
           prerelease: ${{ steps.release-type.outputs.is_prerelease }}
           body: |
             ## 发布类型
-            预发布版本（${{ steps.release-type.outputs.release_type }}）
+            ${{ steps.release-type.outputs.is_prerelease == 'true' && steps.release-type.outputs.release_type == 'Beta' ? '预发布版本（Beta）' : steps.release-type.outputs.is_prerelease == 'true' ? '预发布版本（Release Candidate）' : '正式版本（Stable）' }}
 
             ## 支持架构
             🐧 Linux (x64/ARM64) | 🍎 macOS (ARM64/x64) | 🪟 Windows (x86/x64)
