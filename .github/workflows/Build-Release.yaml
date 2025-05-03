@@ -89,7 +89,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies (macOS)
+      - name: Install dependencies
         run: |
           pip install pyinstaller pillow==11.2.1 PyQt5==5.15.11
 
@@ -120,11 +120,26 @@ jobs:
           cd src
           git config --global --add safe.directory $GITHUB_WORKSPACE/src
 
-      - uses: actions/download-artifact@v4
+      # 修复1：确保正确下载所有构件
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
           pattern: '*'
           merge-multiple: true
+
+      # 调试步骤：验证文件结构
+      - name: Verify artifacts structure
+        run: |
+          echo "Artifacts directory structure:"
+          find artifacts -type f -print
+          echo "Checking files exist:"
+          [ -f "artifacts/windows-x64/Image2Array.exe" ] && echo "Windows x64 OK"
+          [ -f "artifacts/windows-x86/Image2Array.exe" ] && echo "Windows x86 OK"
+          [ -f "artifacts/linux-x64/Image2Array" ] && echo "Linux x64 OK"
+          [ -f "artifacts/linux-arm64/Image2Array" ] && echo "Linux ARM64 OK"
+          [ -f "artifacts/macos-x64/Image2Array" ] && echo "macOS x64 OK"
+          [ -f "artifacts/macos-arm64/Image2Array" ] && echo "macOS ARM64 OK"
 
       - name: Generate changelog
         id: changelog
@@ -146,6 +161,12 @@ jobs:
           echo "$messages" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
 
+      # 修复2：改进的时间显示格式
+      - name: Get formatted date
+        id: date
+        run: echo "date=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+
+      # 修复3：确保所有文件被包含
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
@@ -158,7 +179,7 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
 
             ## 🛠️ 构建信息
-            🕒 构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")  
+            🕒 构建时间: ${{ steps.date.outputs.date }}  
             🏷️ 版本标签: ${{ github.ref_name }}  
             🔗 提交页面: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
           files: |
