@@ -67,22 +67,32 @@ RGBA8888、RGBA4444、ARGB1555、RGB332、BGR565/BGR888（BGR格式）、RGBX888
 ## 使用
 ### 使用脚本
 #### 1. 克隆仓库
-```
+```bash
 git clone https://github.com/CheongSzesuen/Image2Array.git
 ```
 #### 2. 进入项目目录
-```
+```bash
 cd Image2Array #Linux下
 手动进入下载的文件夹 #macos或windows
 ```
 #### 3. 安装依赖
 linux需要进入venv运行pip
-```
+```bash
 pip install -r requirements.txt
 ```
 #### 4. 运行程序
-```
+```bash
 python Image2Array.py
+```
+>提示：程序会自动记录上次打开的目录，配置文件保存在 ~/.config/Image2Array/config.json
+#### 5. 常见问题
+```bash
+# 如果遇到PyQt5错误：
+sudo apt-get install python3-pyqt5  # Ubuntu/Debian
+brew install pyqt@5                # macOS
+
+# 如果遇到Pillow错误：
+pip install --upgrade pillow
 ```
 ### 使用打包的程序
 #### 1. 下载程序
@@ -118,6 +128,7 @@ Image2Array/
 - [x] 支持更多原始图片格式
 - [x] 支持GUI
 - [x] 打包为全平台
+- [ ] 标准化软件
 - [ ] 支持更多取模灰度选择
 - [x] 标准化文件结构
 - [ ] 支持不同取模顺序
