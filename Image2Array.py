@@ -11,7 +11,6 @@ CONFIG_FILE = "config.json"
 LOG_DIR = "bin"
 
 def setup_logging():
-    """设置日志记录"""
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR)
     log_file = os.path.join(LOG_DIR, f"log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
@@ -26,7 +25,6 @@ def rgb_to_rgb565(r, g, b):
     return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
 
 def image_to_c_array(image_path, output_header_file):
-    """将图片转为 RGB565 格式的 C 语言数组，并保存到指定的头文件"""
     try:
         if not os.path.exists(image_path):
             logging.error(f"图片文件不存在: {image_path}")
