@@ -172,9 +172,12 @@ jobs:
           echo "$messages" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
 
-      - name: Get formatted date
-        id: date
-        run: echo "date=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+      - name: Get Beijing time
+        id: time
+        run: |
+          # 设置时区为北京时间 (Asia/Shanghai)
+          export TZ=Asia/Shanghai
+          echo "time=$(date '+%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_OUTPUT
 
       - uses: softprops/action-gh-release@v1
         with:
@@ -188,7 +191,7 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
 
             ## 🛠️ 构建信息
-            🕒 构建时间: ${{ steps.date.outputs.date }}  
+            🕒 构建时间: ${{ steps.time.outputs.time }}  
             🏷️ 版本标签: ${{ github.ref_name }}  
             🔗 提交页面: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
           files: |

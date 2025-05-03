@@ -6,10 +6,8 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLa
 from PyQt5.QtCore import Qt
 from PIL import Image
 
-# 配置文件路径，用于保存上次选择的路径
 CONFIG_FILE = "config.json"
 
-# 日志文件夹路径
 LOG_DIR = "bin"
 
 def setup_logging():
