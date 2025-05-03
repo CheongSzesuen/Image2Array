@@ -140,7 +140,7 @@ jobs:
           TAG=${{ github.ref_name }}
           
           # 检查 Windows x64 文件
-          if [ -f "artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ]; then
+          if [ -f "./artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ]; then
             echo "Windows x64 OK"
           else
             echo "Windows x64 NOT FOUND"
@@ -148,7 +148,7 @@ jobs:
           fi
           
           # 检查 Windows x86 文件
-          if [ -f "artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ]; then
+          if [ -f "./artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ]; then
             echo "Windows x86 OK"
           else
             echo "Windows x86 NOT FOUND"
@@ -156,7 +156,7 @@ jobs:
           fi
           
           # 检查 Linux x64 文件
-          if [ -f "artifacts/linux-x64/Image2Array-x64-${TAG}" ]; then
+          if [ -f "./artifacts/linux-x64/Image2Array-x64-${TAG}" ]; then
             echo "Linux x64 OK"
           else
             echo "Linux x64 NOT FOUND"
@@ -164,7 +164,7 @@ jobs:
           fi
           
           # 检查 Linux ARM64 文件
-          if [ -f "artifacts/linux-arm64/Image2Array-arm64-${TAG}" ]; then
+          if [ -f "./artifacts/linux-arm64/Image2Array-arm64-${TAG}" ]; then
             echo "Linux ARM64 OK"
           else
             echo "Linux ARM64 NOT FOUND"
@@ -172,7 +172,7 @@ jobs:
           fi
           
           # 检查 macOS x64 文件
-          if [ -f "artifacts/macos-x64/Image2Array-x64-${TAG}" ]; then
+          if [ -f "./artifacts/macos-x64/Image2Array-x64-${TAG}" ]; then
             echo "macOS x64 OK"
           else
             echo "macOS x64 NOT FOUND"
@@ -180,7 +180,7 @@ jobs:
           fi
           
           # 检查 macOS ARM64 文件
-          if [ -f "artifacts/macos-arm64/Image2Array-arm64-${TAG}" ]; then
+          if [ -f "./artifacts/macos-arm64/Image2Array-arm64-${TAG}" ]; then
             echo "macOS ARM64 OK"
           else
             echo "macOS ARM64 NOT FOUND"
@@ -191,12 +191,12 @@ jobs:
         run: |
           mkdir -p release_assets
           TAG=${{ github.ref_name }}
-          cp artifacts/windows-x64/Image2Array-x64-${TAG}.exe release_assets/Image2Array-windows-x64-${TAG}.exe
-          cp artifacts/windows-x86/Image2Array-x86-${TAG}.exe release_assets/Image2Array-windows-x86-${TAG}.exe
-          cp artifacts/linux-x64/Image2Array-x64-${TAG} release_assets/Image2Array-linux-x64-${TAG}
-          cp artifacts/linux-arm64/Image2Array-arm64-${TAG} release_assets/Image2Array-linux-arm64-${TAG}
-          cp artifacts/macos-x64/Image2Array-x64-${TAG} release_assets/Image2Array-macos-x64-${TAG}
-          cp artifacts/macos-arm64/Image2Array-arm64-${TAG} release_assets/Image2Array-macos-arm64-${TAG}
+          cp "./artifacts/windows-x64/Image2Array-x64-${TAG}.exe" "release_assets/Image2Array-windows-x64-${TAG}.exe"
+          cp "./artifacts/windows-x86/Image2Array-x86-${TAG}.exe" "release_assets/Image2Array-windows-x86-${TAG}.exe"
+          cp "./artifacts/linux-x64/Image2Array-x64-${TAG}" "release_assets/Image2Array-linux-x64-${TAG}"
+          cp "./artifacts/linux-arm64/Image2Array-arm64-${TAG}" "release_assets/Image2Array-linux-arm64-${TAG}"
+          cp "./artifacts/macos-x64/Image2Array-x64-${TAG}" "release_assets/Image2Array-macos-x64-${TAG}"
+          cp "./artifacts/macos-arm64/Image2Array-arm64-${TAG}" "release_assets/Image2Array-macos-arm64-${TAG}"
           chmod +x release_assets/Image2Array-linux-*
           chmod +x release_assets/Image2Array-macos-*
           ls -lh release_assets/
