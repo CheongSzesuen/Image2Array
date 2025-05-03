@@ -107,7 +107,7 @@ class ImageConverterApp(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("Image2Array - 多功能图片转换工具")
+        self.setWindowTitle("Image2Array")
         self.setGeometry(100, 100, 600, 400)
         
         layout = QVBoxLayout()

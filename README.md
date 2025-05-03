@@ -66,39 +66,60 @@ RGBA8888、RGBA4444、ARGB1555、RGB332、BGR565/BGR888（BGR格式）、RGBX888
 - 嵌入式显示屏（如ST7735、ST7789、ILI9341等控制器）默认支持RGB565。
 ## 使用
 ### 使用脚本
+#### 1. 克隆仓库
+```
+git clone https://github.com/CheongSzesuen/Image2Array.git
+```
+#### 2. 进入项目目录
+```
+cd Image2Array #Linux下
+手动进入下载的文件夹 #macos或windows
+```
+#### 3. 安装依赖
+linux需要进入venv运行pip
+```
+pip install -r requirements.txt
+```
+#### 4. 运行程序
+```
+python Image2Array.py
+```
+### 使用打包的程序
+#### 1. 下载程序
+进入[Image2Array的Releases](https://github.com/CheongSzesuen/Image2Array/releases)的页面，然后找到标有Latest标签的最新版本下载。
+#### 2. 下载对应的版本
+提供 Linux (x64/ARM64) | macOS (ARM64/x64) | Windows (x86/x64)
+#### 3. 使用可执行程序
+Linux需要先让文件作为软件运行（右键文件点属性）再使用
+### 在CPP代码中使用数组
+#### 1. 将生成的数组文件放进需要的文件夹里
+比如放在单片机的工程文件夹根目录
+#### 2. 在main.cpp里引入此文件
+在`main.cpp`里的头部引入文件。以VScode中的PlatformIO的文件结构做例子。并假设你的数组文件名叫做image_data.h，放在根目录里。
+```cpp
+#include "../image_data.h"
+```
+#### 3. 在main.cpp里加入渲染的代码
+调用pushImage函数显示图片，此程序目前会将数组名称默认为`image_data`，所以在main.cpp里写
+```cpp
+tft.pushImage(x, y, IMAGE_WIDTH, IMAGE_HEIGHT, const_cast<uint16_t *>(image_data));
+```
+这里的x、y是确定图片开始显示位于屏幕的哪里
+`IMAGE_WIDTH`和 `IMAGE_HEIGHT`是由I2A生成的`image_data.h`里确定的，这串定义在`image_data.h`文件的末尾。一般不需要更改，因为它是由图片大小决定的。后面的`image_data`就是**数组名称**，不是**文件名称**。
 
-1. 安装Pillow library:
-```sh
-pip install Pillow
-```
-在linux和mac中可能需要开启dev，在dev里使用pip
-2. 运行脚本: 
-```sh
-python ImageProcessing.py
-```
-3. 输入要转换的图片文件夹路径,脚本会自动转换文件夹内所有图片 
-4. 转换完成后,项目文件夹下会生成img.h文件,直接将该文件加入单片机程序使用即可 
-5. 在单片机程序中调用pushImage函数显示图片:
-```
-#include "你的c语言文件和目标数组文件的路径"  
-tft.pushImage(0, 0, width, height, "填数组名称，不是数组文件名称");
-```
 ### 仓库文件结构
 ```
 Image2Array/
 ├── requirements.txt #python打包使用，请忽略
-├── Image2Array.py #主程序
-├── image_data.h #得到的数组
-└── originimage/
-    └── example.jpg #放入要转换的图片
+└── Image2Array.py #主程序
 ```
 
 ## To-Do
-- [ ] 支持更多原始图片格式
-- [ ] 支持GUI
-- [ ] 打包为全平台
+- [x] 支持更多原始图片格式
+- [x] 支持GUI
+- [x] 打包为全平台
 - [ ] 支持更多取模灰度选择
-- [ ] 标准化文件结构
+- [x] 标准化文件结构
 - [ ] 支持不同取模顺序
 - [ ] 按照屏幕要求的字节顺序排列二进制位
 - [ ] 用户自定义转换名称和数组名称
