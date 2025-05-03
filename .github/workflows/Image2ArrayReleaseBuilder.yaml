@@ -32,7 +32,7 @@ jobs:
       - name: Build executable
         shell: cmd
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG=${{ github.ref_name }}
           pyinstaller --onefile --noconsole ^
             --name Image2Array-${{ matrix.arch }}-${TAG} ^
             --add-data "originimage;originimage" ^
@@ -68,7 +68,7 @@ jobs:
 
       - name: Build executable
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG=${{ github.ref_name }}
           pyinstaller --onefile --noconsole \
             --name Image2Array-${{ matrix.arch }}-${TAG} \
             --add-data "originimage:originimage" \
@@ -99,7 +99,7 @@ jobs:
 
       - name: Build executable
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG=${{ github.ref_name }}
           pyinstaller --onefile --noconsole \
             --name Image2Array-${{ matrix.arch }}-${TAG} \
             --add-data "originimage:originimage" \
@@ -137,7 +137,7 @@ jobs:
           echo "Artifacts directory structure:"
           ls -R artifacts
           echo "Checking files exist:"
-          TAG="${{ github.ref_name }}"
+          TAG=${{ github.ref_name }}
           [ -f "artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ] && echo "Windows x64 OK" || exit 1
           [ -f "artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ] && echo "Windows x86 OK" || exit 1
           [ -f "artifacts/linux-x64/Image2Array-x64-${TAG}" ] && echo "Linux x64 OK" || exit 1
@@ -148,7 +148,7 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release_assets
-          TAG="${{ github.ref_name }}"
+          TAG=${{ github.ref_name }}
           cp artifacts/windows-x64/Image2Array-x64-${TAG}.exe release_assets/Image2Array-windows-x64-${TAG}.exe
           cp artifacts/windows-x86/Image2Array-x86-${TAG}.exe release_assets/Image2Array-windows-x86-${TAG}.exe
           cp artifacts/linux-x64/Image2Array-x64-${TAG} release_assets/Image2Array-linux-x64-${TAG}
@@ -162,7 +162,7 @@ jobs:
       - name: Determine release type
         id: release-type
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG=${{ github.ref_name }}
           
           if [[ "$TAG" == *-beta* ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
@@ -182,7 +182,7 @@ jobs:
           cd src
           git fetch --tags --force
           
-          current_tag="${{ github.ref_name }}"
+          current_tag=${{ github.ref_name }}
           previous_tag=$(git describe --tags --abbrev=0 "$current_tag^" 2>/dev/null || echo "")
           
           if [ -z "$previous_tag" ]; then
