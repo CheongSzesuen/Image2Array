@@ -65,6 +65,8 @@ RGBA8888、RGBA4444、ARGB1555、RGB332、BGR565/BGR888（BGR格式）、RGBX888
 3. 兼容
 - 嵌入式显示屏（如ST7735、ST7789、ILI9341等控制器）默认支持RGB565。
 ## 使用
+### 使用脚本
+
 1. 安装Pillow library:
 ```sh
 pip install Pillow
