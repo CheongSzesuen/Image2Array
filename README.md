@@ -1,7 +1,7 @@
 # Image2Array(I2A)
 >用于ST7735S驱动的TFT_LCD（128*160）屏幕图片的取模 
 
-由于在学习由ESP32 WROOM E为开发板的TFT_LCD1.8英寸屏幕驱动中遇到图片取模问题，而苦于既没有在线的转换也没有Linux下的转换软件，即便通过wine在Linux下使用windows的软件，还有正版注册和生成的C语言数组无法正确显示的问题。于是利用AI写了python脚本来实现取模，现在（2025.5.2 晚）上传GitHub。决定长期开发脚本。
+由于在学习由ESP32 WROOM E为开发板的TFT_LCD1.8英寸屏幕驱动中遇到图片取模问题，而苦于既没有在线的转换也没有Linux下的转换软件，即便通过wine在Linux下使用windows的软件，还有正版注册和生成的C语言数组无法正确显示的问题。于是有了此python脚本来实现取模，现在（2025.5.2 晚）上传GitHub。决定长期开发脚本。
 ## 适用范围
 本脚本适合于ESP32 WROOM E为开发板，ST7735S驱动的TFT_LCD屏幕（尺寸为1.8英寸,RGB,128*160）的渲染图片的学习项目。
 之后会变为纯粹的取模脚本，拓展适用范围和平台。
@@ -111,6 +111,6 @@ Image2Array/
 - [ ] 支持亮度调整
 
 ## 作者
-WaiJade(CheongSzesuen) with AI
+WaiJade(CheongSzesuen)
 ## 许可证
 遵循GPL-3.0 license
