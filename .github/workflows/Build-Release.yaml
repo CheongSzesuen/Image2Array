@@ -31,14 +31,14 @@ jobs:
         shell: cmd
         run: |
           pyinstaller --onefile --noconsole ^
-            --name Image2Array ^
+            --name Image2Array-${{ matrix.arch }} ^
             --add-data "originimage;originimage" ^
             Image2Array.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{ matrix.arch }}
-          path: dist/Image2Array.exe
+          path: dist/Image2Array-${{ matrix.arch }}.exe
 
   build-linux:
     name: Build Linux (${{ matrix.arch }})
@@ -66,14 +66,14 @@ jobs:
       - name: Build executable
         run: |
           pyinstaller --onefile --noconsole \
-            --name Image2Array \
+            --name Image2Array-${{ matrix.arch }} \
             --add-data "originimage:originimage" \
             Image2Array.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.arch }}
-          path: dist/Image2Array
+          path: dist/Image2Array-${{ matrix.arch }}
 
   build-macos:
     name: Build macOS (${{ matrix.arch }})
@@ -96,14 +96,14 @@ jobs:
       - name: Build executable
         run: |
           pyinstaller --onefile --noconsole \
-            --name Image2Array \
+            --name Image2Array-${{ matrix.arch }} \
             --add-data "originimage:originimage" \
             Image2Array.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.arch }}
-          path: dist/Image2Array
+          path: dist/Image2Array-${{ matrix.arch }}
 
   create-release:
     name: Create Release
@@ -120,26 +120,24 @@ jobs:
           cd src
           git config --global --add safe.directory $GITHUB_WORKSPACE/src
 
-      # 修复1：确保正确下载所有构件
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           pattern: '*'
-          merge-multiple: true
+          merge-multiple: false  # 保持构件在各自目录中
 
-      # 调试步骤：验证文件结构
       - name: Verify artifacts structure
         run: |
           echo "Artifacts directory structure:"
-          find artifacts -type f -print
+          ls -R artifacts
           echo "Checking files exist:"
-          [ -f "artifacts/windows-x64/Image2Array.exe" ] && echo "Windows x64 OK"
-          [ -f "artifacts/windows-x86/Image2Array.exe" ] && echo "Windows x86 OK"
-          [ -f "artifacts/linux-x64/Image2Array" ] && echo "Linux x64 OK"
-          [ -f "artifacts/linux-arm64/Image2Array" ] && echo "Linux ARM64 OK"
-          [ -f "artifacts/macos-x64/Image2Array" ] && echo "macOS x64 OK"
-          [ -f "artifacts/macos-arm64/Image2Array" ] && echo "macOS ARM64 OK"
+          [ -f "artifacts/windows-x64/Image2Array-x64.exe" ] && echo "Windows x64 OK"
+          [ -f "artifacts/windows-x86/Image2Array-x86.exe" ] && echo "Windows x86 OK"
+          [ -f "artifacts/linux-x64/Image2Array-x64" ] && echo "Linux x64 OK"
+          [ -f "artifacts/linux-arm64/Image2Array-arm64" ] && echo "Linux ARM64 OK"
+          [ -f "artifacts/macos-x64/Image2Array-x64" ] && echo "macOS x64 OK"
+          [ -f "artifacts/macos-arm64/Image2Array-arm64" ] && echo "macOS ARM64 OK"
 
       - name: Generate changelog
         id: changelog
@@ -161,12 +159,10 @@ jobs:
           echo "$messages" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
 
-      # 修复2：改进的时间显示格式
       - name: Get formatted date
         id: date
         run: echo "date=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
 
-      # 修复3：确保所有文件被包含
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
@@ -183,9 +179,9 @@ jobs:
             🏷️ 版本标签: ${{ github.ref_name }}  
             🔗 提交页面: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
           files: |
-            artifacts/windows-x64/Image2Array.exe
-            artifacts/windows-x86/Image2Array.exe
-            artifacts/linux-x64/Image2Array
-            artifacts/linux-arm64/Image2Array
-            artifacts/macos-x64/Image2Array
-            artifacts/macos-arm64/Image2Array
+            artifacts/windows-x64/Image2Array-x64.exe
+            artifacts/windows-x86/Image2Array-x86.exe
+            artifacts/linux-x64/Image2Array-x64
+            artifacts/linux-arm64/Image2Array-arm64
+            artifacts/macos-x64/Image2Array-x64
+            artifacts/macos-arm64/Image2Array-arm64
