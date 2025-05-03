@@ -3,7 +3,9 @@ name: Image2Array Release Builder
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'      # 正式版格式 v1.0.0
+      - 'v*.*.*-beta*' # beta版格式 v1.0.0-beta1
+      - 'v*.*.*-rc'    # 预发布版格式 v1.0.0-rc
   workflow_dispatch:
 
 jobs:
@@ -172,18 +174,38 @@ jobs:
           echo "$messages" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
 
+      - name: Determine release type
+        id: release-type
+        run: |
+          TAG="${{ github.ref_name }}"
+          
+          if [[ "$TAG" == *-beta* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "release_type=Beta" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *-rc ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "release_type=Release Candidate" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "release_type=Stable" >> $GITHUB_OUTPUT
+          fi
+          echo "Detected release type: ${{ steps.release-type.outputs.release_type }}"
+
       - name: Get Beijing time
         id: time
         run: |
-          # 设置时区为北京时间 (Asia/Shanghai)
           export TZ=Asia/Shanghai
           echo "time=$(date '+%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_OUTPUT
 
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          name: "Image2Array ${{ github.ref_name }}"
+          name: "Image2Array ${{ github.ref_name }} (${{ steps.release-type.outputs.release_type }})"
+          prerelease: ${{ steps.release-type.outputs.is_prerelease }}
           body: |
+            ## 发布类型
+            ${{ steps.release-type.outputs.release_type }} 版本
+
             ## 支持架构
             🐧 Linux (x64/ARM64) | 🍎 macOS (ARM64/x64) | 🪟 Windows (x86/x64)
 

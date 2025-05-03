@@ -23,7 +23,6 @@ def setup_logging():
     logging.info("程序启动")
 
 def rgb_to_rgb565(r, g, b):
-    """将 RGB888 转换为 RGB565"""
     return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
 
 def image_to_c_array(image_path, output_header_file):
@@ -35,16 +34,12 @@ def image_to_c_array(image_path, output_header_file):
             return
 
         logging.info(f"正在处理图片: {image_path}")
-        # 打开图片
         with Image.open(image_path) as img:
             logging.info(f"原始图片尺寸: {img.size}")
-            # 转换为 RGB 模式
             img = img.convert('RGB')
             
-            # 获取原始图片宽高
             original_width, original_height = img.size
 
-            # 按原始比例缩放，确保不超过屏幕尺寸（160x128）
             scale_width = 160 / original_width
             scale_height = 128 / original_height
             scale = min(scale_width, scale_height)
@@ -55,28 +50,23 @@ def image_to_c_array(image_path, output_header_file):
             logging.info(f"图片缩放比例: {scale:.2f}, 最终尺寸: {new_width}x{new_height}")
             img = img.resize((new_width, new_height), Image.LANCZOS)
             
-            # 获取图片宽高
             width, height = img.size
-            # 获取图片像素
             pixels = list(img.getdata())
 
-        # 检查生成的数组是否超过限制大小
         max_size = 851968  # 1310720 字节的 65%
         if width * height * 2 > max_size:
             logging.error(f"图片大小超过限制: {width * height * 2} bytes")
             QMessageBox.critical(None, "错误", "图片大小超过了允许的最大值（1310720 字节的 65%）。")
             return
 
-        # 转换为 RGB565 格式
         rgb565_pixels = [rgb_to_rgb565(r, g, b) for r, g, b in pixels]
 
-        # 写入 C 语言数组到头文件
         with open(output_header_file, 'w') as f:
             f.write("#pragma once\n")
             f.write("#include <pgmspace.h>\n\n")
             f.write(f"const unsigned short image_data[{width * height}] PROGMEM = {{\n")
             for i, pixel in enumerate(rgb565_pixels):
-                if i % 8 == 0:  # 每行 8 个元素
+                if i % 8 == 0:  
                     f.write("\t")
                 f.write(f"0x{pixel:04X}, ")
                 if (i + 1) % 8 == 0 or i == len(rgb565_pixels) - 1:
@@ -84,8 +74,8 @@ def image_to_c_array(image_path, output_header_file):
             f.write("};\n\n")
             f.write(f"#define IMAGE_WIDTH {width}\n")
             f.write(f"#define IMAGE_HEIGHT {height}\n")
-            f.write(f"#define SCREEN_WIDTH 160\n")  # 修改为160
-            f.write(f"#define SCREEN_HEIGHT 128\n")  # 修改为128
+            f.write(f"#define SCREEN_WIDTH 160\n")  
+            f.write(f"#define SCREEN_HEIGHT 128\n")  
 
         logging.info(f"图片转换完成，文件已保存到: {output_header_file}")
         QMessageBox.information(None, "成功", f"图片转换完成！文件已保存到 {output_header_file}")
@@ -94,7 +84,6 @@ def image_to_c_array(image_path, output_header_file):
         QMessageBox.critical(None, "错误", f"转换过程中发生错误：{e}")
 
 def load_config():
-    """加载配置文件，返回上次选择的路径"""
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             config = json.load(f)
@@ -102,7 +91,6 @@ def load_config():
     return ""
 
 def save_config(last_path):
-    """保存配置文件，记录上次选择的路径"""
     config = {"last_path": last_path}
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f)
