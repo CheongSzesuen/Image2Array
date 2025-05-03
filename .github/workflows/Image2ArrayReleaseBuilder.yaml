@@ -138,28 +138,42 @@ jobs:
           ls -R artifacts
           echo "Checking files exist:"
           TAG=${{ github.ref_name }}
-          echo "Checking Windows x64:"
-          [ -f "artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ] && echo "Windows x64 OK" || echo "Windows x64 NOT FOUND"
-          echo "Checking Windows x86:"
-          [ -f "artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ] && echo "Windows x86 OK" || echo "Windows x86 NOT FOUND"
-          echo "Checking Linux x64:"
-          [ -f "artifacts/linux-x64/Image2Array-x64-${TAG}" ] && echo "Linux x64 OK" || echo "Linux x64 NOT FOUND"
-          echo "Checking Linux ARM64:"
-          [ -f "artifacts/linux-arm64/Image2Array-arm64-${TAG}" ] && echo "Linux ARM64 OK" || echo "Linux ARM64 NOT FOUND"
-          echo "Checking macOS x64:"
-          [ -f "artifacts/macos-x64/Image2Array-x64-${TAG}" ] && echo "macOS x64 OK" || echo "macOS x64 NOT FOUND"
-          echo "Checking macOS ARM64:"
-          [ -f "artifacts/macos-arm64/Image2Array-arm64-${TAG}" ] && echo "macOS ARM64 OK" || echo "macOS ARM64 NOT FOUND"
-
-      - name: Check if all artifacts exist
-        run: |
-          TAG=${{ github.ref_name }}
-          if [ ! -f "artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ]; then exit 1; fi
-          if [ ! -f "artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ]; then exit 1; fi
-          if [ ! -f "artifacts/linux-x64/Image2Array-x64-${TAG}" ]; then exit 1; fi
-          if [ ! -f "artifacts/linux-arm64/Image2Array-arm64-${TAG}" ]; then exit 1; fi
-          if [ ! -f "artifacts/macos-x64/Image2Array-x64-${TAG}" ]; then exit 1; fi
-          if [ ! -f "artifacts/macos-arm64/Image2Array-arm64-${TAG}" ]; then exit 1; fi
+          if [ -f "artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ]; then
+            echo "Windows x64 OK"
+          else
+            echo "Windows x64 NOT FOUND"
+            exit 1
+          fi
+          if [ -f "artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ]; then
+            echo "Windows x86 OK"
+          else
+            echo "Windows x86 NOT FOUND"
+            exit 1
+          fi
+          if [ -f "artifacts/linux-x64/Image2Array-x64-${TAG}" ]; then
+            echo "Linux x64 OK"
+          else
+            echo "Linux x64 NOT FOUND"
+            exit 1
+          fi
+          if [ -f "artifacts/linux-arm64/Image2Array-arm64-${TAG}" ]; then
+            echo "Linux ARM64 OK"
+          else
+            echo "Linux ARM64 NOT FOUND"
+            exit 1
+          fi
+          if [ -f "artifacts/macos-x64/Image2Array-x64-${TAG}" ]; then
+            echo "macOS x64 OK"
+          else
+            echo "macOS x64 NOT FOUND"
+            exit 1
+          fi
+          if [ -f "artifacts/macos-arm64/Image2Array-arm64-${TAG}" ]; then
+            echo "macOS ARM64 OK"
+          else
+            echo "macOS ARM64 NOT FOUND"
+            exit 1
+          fi
 
       - name: Prepare release assets
         run: |
