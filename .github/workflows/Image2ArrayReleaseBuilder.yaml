@@ -200,11 +200,11 @@ jobs:
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          name: "Image2Array ${{ github.ref_name }} (${{ steps.release-type.outputs.release_type }})"
+          name: "Image2Array ${{ github.ref_name }}"
           prerelease: ${{ steps.release-type.outputs.is_prerelease }}
           body: |
             ## 发布类型
-            ${{ steps.release-type.outputs.release_type }} 版本
+            预发布版本（${{ steps.release-type.outputs.release_type }}）
 
             ## 支持架构
             🐧 Linux (x64/ARM64) | 🍎 macOS (ARM64/x64) | 🪟 Windows (x86/x64)
