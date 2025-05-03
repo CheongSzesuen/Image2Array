@@ -138,36 +138,48 @@ jobs:
           ls -R artifacts
           echo "Checking files exist:"
           TAG=${{ github.ref_name }}
+          
+          # 检查 Windows x64 文件
           if [ -f "artifacts/windows-x64/Image2Array-x64-${TAG}.exe" ]; then
             echo "Windows x64 OK"
           else
             echo "Windows x64 NOT FOUND"
             exit 1
           fi
+          
+          # 检查 Windows x86 文件
           if [ -f "artifacts/windows-x86/Image2Array-x86-${TAG}.exe" ]; then
             echo "Windows x86 OK"
           else
             echo "Windows x86 NOT FOUND"
             exit 1
           fi
+          
+          # 检查 Linux x64 文件
           if [ -f "artifacts/linux-x64/Image2Array-x64-${TAG}" ]; then
             echo "Linux x64 OK"
           else
             echo "Linux x64 NOT FOUND"
             exit 1
           fi
+          
+          # 检查 Linux ARM64 文件
           if [ -f "artifacts/linux-arm64/Image2Array-arm64-${TAG}" ]; then
             echo "Linux ARM64 OK"
           else
             echo "Linux ARM64 NOT FOUND"
             exit 1
           fi
+          
+          # 检查 macOS x64 文件
           if [ -f "artifacts/macos-x64/Image2Array-x64-${TAG}" ]; then
             echo "macOS x64 OK"
           else
             echo "macOS x64 NOT FOUND"
             exit 1
           fi
+          
+          # 检查 macOS ARM64 文件
           if [ -f "artifacts/macos-arm64/Image2Array-arm64-${TAG}" ]; then
             echo "macOS ARM64 OK"
           else
