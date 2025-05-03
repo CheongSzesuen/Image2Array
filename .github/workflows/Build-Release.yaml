@@ -89,9 +89,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install dependencies (macOS)
         run: |
-          pip install pyinstaller pillow==11.2.1 PyQt5==5.15.11 PyQt5-Qt5==5.15.2
+          pip install pyinstaller pillow==11.2.1 PyQt5==5.15.11
 
       - name: Build executable
         run: |
