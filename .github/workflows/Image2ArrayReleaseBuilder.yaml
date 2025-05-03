@@ -161,7 +161,7 @@ jobs:
           
           if [[ "$TAG" == *-beta* ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
-            echo "release_type=预发布版本（Beta）" >> $GITHUB_OUTPUT
+            echo "release_type=测试版本（Beta）" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == *-rc ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
             echo "release_type=预发布版本（Release Candidate）" >> $GITHUB_OUTPUT
